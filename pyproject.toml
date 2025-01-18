@@ -1,0 +1,29 @@
+[project]
+name = "varscore"
+description = "A library for common functions in variant effect prediction & prioritization."
+authors = [
+	{ name = "Ivy Evergreen" },
+	{ name = "Salil Deshpande" },
+	{ name = "Riya Sinha" },
+]
+version = "0.0.1a"
+requires-python = ">= 3.8"
+dependencies = [
+	"polars==1.8.2",
+	"pybedtools==0.10.0",
+	"pandas==1.3.4",
+]
+keywords = ["variant scoring", "variant effect", "variant prioritization", "variant", "scoring", "effect", "prioritization", "genomics", "chrombpnet"]
+
+[project.urls]
+Repository = "https://github.com/kundajelab/varscore.git"
+Issues = "https://github.com/kundajelab/varscore/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
