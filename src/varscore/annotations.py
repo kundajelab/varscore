@@ -5,12 +5,17 @@ from typing import List, Tuple
 from pybedtools import BedTool
 
 
-def add_n_closest_elements(variants_bed_df: pl.DataFrame, elements_bed_file: str, k_elements: int, element_label: str) -> pl.DataFrame:
+def add_n_closest_elements(
+    variants_bed_df: pl.DataFrame,
+    elements_bed_file: str,
+    k_elements: int,
+    element_label: str,
+) -> pl.DataFrame:
     """
     Add the n closest elements to each variant in the variants_bed_df DataFrame.
     Parameters:
     variants_bed_df (pl.DataFrame): A Polars DataFrame containing variant inforrmation, represented the BED format, where the first columns being 'chrom', 'chromStart', 'chromEnd', 'name', etc.
-                                    bedtools closest requires that all input files are presorted data by chromosome and then by 
+                                    bedtools closest requires that all input files are presorted data by chromosome and then by
                                     start position (e.g., sort -k1,1 -k2,2n in.bed > in.sorted.bed for BED files).
     elements_bed_file (str): Path to a file containing all elements (such as genes) to be considered for proximity calculations.
     k_elements (int): The number of closest elements to add for each variant.
@@ -22,37 +27,60 @@ def add_n_closest_elements(variants_bed_df: pl.DataFrame, elements_bed_file: str
     variants_pd = variants_bed_df.to_pandas()
     variants_bt = BedTool.from_dataframe(variants_pd)
     # Take in the elements file
-    elements_pl = pl.read_csv(elements_bed_file, separator='\t')
+    elements_pl = pl.read_csv(elements_bed_file, separator="\t")
     elements_pd = elements_pl.to_pandas()
     elements_bt = BedTool.from_dataframe(elements_pd)
     # Get the n closest elements to each variant.
-    closests_bed = variants_bt.closest(elements_bt, d=True, t='first', k=k_elements)
+    closests_bed = variants_bt.closest(elements_bt, d=True, t="first", k=k_elements)
     closests_pl = pl.from_pandas(closests_bed.to_dataframe(header=None))
     new_cols = []
     if not closests_pl.is_empty():
-        closests_pl = closests_pl.rename({'5': 'variant_id', '9':'close_element', closests_pl.columns[-1]: 'element_distance'})
-        closests_pl = closests_pl.group_by(pl.col('variant_id'), maintain_order=True).agg(pl.col('close_element'), pl.col('element_distance'))
+        closests_pl = closests_pl.rename(
+            {
+                "5": "variant_id",
+                "9": "close_element",
+                closests_pl.columns[-1]: "element_distance",
+            }
+        )
+        closests_pl = closests_pl.group_by(
+            pl.col("variant_id"), maintain_order=True
+        ).agg(pl.col("close_element"), pl.col("element_distance"))
 
         for i in range(k_elements):
-            new_cols.append(pl.col('close_element').list.get(i, null_on_oob=True).alias(f'closest_{element_label}_{i+1}'))
-            new_cols.append(pl.col('element_distance').list.get(i, null_on_oob=True).alias(f'closest_{element_label}_distance_{i+1}'))
+            new_cols.append(
+                pl.col("close_element")
+                .list.get(i, null_on_oob=True)
+                .alias(f"closest_{element_label}_{i+1}")
+            )
+            new_cols.append(
+                pl.col("element_distance")
+                .list.get(i, null_on_oob=True)
+                .alias(f"closest_{element_label}_distance_{i+1}")
+            )
         closests_pl = closests_pl.with_columns(new_cols)
-        closests_pl = closests_pl.drop(['close_element', 'element_distance'])
-    else:  
+        closests_pl = closests_pl.drop(["close_element", "element_distance"])
+    else:
         # Make empty columns if no elements are found.
-        closests_pl = pl.DataFrame(columns=['variant_id'])
+        closests_pl = pl.DataFrame(columns=["variant_id"])
         for i in range(k_elements):
-            new_cols.append(pl.lit(None).alias(f'closest_{element_label}_{i+1}')),
-            new_cols.append(pl.lit(None).alias(f'closest_{element_label}_distance_{i+1}'))
+            new_cols.append(pl.lit(None).alias(f"closest_{element_label}_{i+1}")),
+            new_cols.append(
+                pl.lit(None).alias(f"closest_{element_label}_distance_{i+1}")
+            )
     return closests_pl
 
 
-def add_closest_elements_in_window(variants_bed_df: pl.DataFrame, elements_bed_file: str, window_size: str, element_label: str) -> pd.DataFrame:
+def add_closest_elements_in_window(
+    variants_bed_df: pl.DataFrame,
+    elements_bed_file: str,
+    window_size: str,
+    element_label: str,
+) -> pd.DataFrame:
     """
     Annotates variants with the closest elements within a specified window size.
     Parameters:
     variants_bed_df (pl.DataFrame): A Polars DataFrame containing variant inforrmation, represented the BED format, where the first columns being 'chrom', 'chromStart', 'chromEnd', 'name', etc.
-                                    bedtools closest requires that all input files are presorted data by chromosome and then by 
+                                    bedtools closest requires that all input files are presorted data by chromosome and then by
                                     start position (e.g., sort -k1,1 -k2,2n in.bed > in.sorted.bed for BED files).
     elements_bed_file (str): Path to a file containing all elements (such as genes) to be considered for proximity calculations.
     window_size (str): The window size within which to search for the closest elements.
@@ -72,20 +100,23 @@ def add_closest_elements_in_window(variants_bed_df: pl.DataFrame, elements_bed_f
     closests_pl = pl.from_pandas(closests_bt.to_dataframe(header=None))
     result_label = f"{element_label}_within_{window_size}_bp"
     if not closests_pl.is_empty():
-        closests_pl = closests_pl.rename({'5': 'variant_id', '9': 'close_element'})
+        closests_pl = closests_pl.rename({"5": "variant_id", "9": "close_element"})
 
-        closests_pl = closests_pl.group_by(pl.col('variant_id'), maintain_order=True).agg(pl.col('close_element'))
+        closests_pl = closests_pl.group_by(
+            pl.col("variant_id"), maintain_order=True
+        ).agg(pl.col("close_element"))
         closests_pl = closests_pl.with_columns(
-            pl.col('close_element').list.join(';').alias(result_label)
+            pl.col("close_element").list.join(";").alias(result_label)
         )
 
-        closests_pl = closests_pl.drop('close_element')
+        closests_pl = closests_pl.drop("close_element")
     else:
         # TODO convert this to polars
-        closests_pl = pl.DataFrame({
-            "variant_id": variant_scores["variant_id"],
-            f"{element_label}_within_{window_size}_bp": [""] * len(variant_scores["variant_id"])
-        })
+        closests_pl = pl.DataFrame(
+            {
+                "variant_id": variant_scores["variant_id"],
+                f"{element_label}_within_{window_size}_bp": [""]
+                * len(variant_scores["variant_id"]),
+            }
+        )
     return closests_pl
-
-

@@ -93,7 +93,9 @@ def score_variants(
 ####################
 # HELPER FUNCTIONS #
 ####################
-def ingest_fold(model_loc: str, peaks_loc: str, genome_loc: str) -> Union[np.ndarray, None]:
+def ingest_fold(
+    model_loc: str, peaks_loc: str, genome_loc: str
+) -> Union[np.ndarray, None]:
     """Initial processing of a single fold of a model.
 
     Checks that the model is valid. Then, produces the peak distribution.
