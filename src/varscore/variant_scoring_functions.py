@@ -3,6 +3,7 @@ import pandas as pd
 import pyfaidx
 from scipy.stats import binom
 import tensorflow as tf
+from typing import Union
 
 tf.compat.v1.disable_eager_execution()
 from tensorflow.keras.utils import get_custom_objects
@@ -22,7 +23,7 @@ def ingest_model(model_info_dict: dict[str, str], peaks_dist_save_dir: str) -> b
 
     Args:
         model_info_dir: A dictionary that has all information about a model. In
-          particular, it has information about each fold's location, the model
+          particular, it has information about each fold's locaqtion, the model
           name, the peak location, and the genome location.
         peaks_dist_save_dir: The directory in which peak distributions are
           saved.
@@ -92,7 +93,7 @@ def score_variants(
 ####################
 # HELPER FUNCTIONS #
 ####################
-def ingest_fold(model_loc: str, peaks_loc: str, genome_loc: str) -> np.ndarray | None:
+def ingest_fold(model_loc: str, peaks_loc: str, genome_loc: str) -> Union[np.ndarray, None]:
     """Initial processing of a single fold of a model.
 
     Checks that the model is valid. Then, produces the peak distribution.

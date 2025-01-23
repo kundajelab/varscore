@@ -7,11 +7,18 @@ authors = [
 	{ name = "Riya Sinha" },
 ]
 version = "0.0.1a"
-requires-python = ">= 3.8"
+requires-python = ">= 3.8, < 3.10"
 dependencies = [
+	"deeplift>=0.6.13.0",
+	"numpy>=1.24.3",
+	"pandas>=2.0.3",
 	"polars==1.8.2",
 	"pybedtools==0.10.0",
-	"pandas==1.3.4",
+	"pyfaidx>=0.8.1.3",
+	"shap>=0.44.1",
+	"tensorflow>=2.13.1",
+	"tensorflow-probability>=0.21.0",
+	"tf-keras>=2.15.0",
 ]
 keywords = ["variant scoring", "variant effect", "variant prioritization", "variant", "scoring", "effect", "prioritization", "genomics", "chrombpnet"]
 

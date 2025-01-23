@@ -1,2 +1,2 @@
-uv.lock
 *.egg-info
+__pycache__
