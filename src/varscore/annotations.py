@@ -6,8 +6,13 @@ import pandas as pd
 from pydantic import BaseModel
 from typing import List, Tuple
 
-import region_utils
+import src.varscore.region_utils as region_utils
 
+class VariantAnnotationInput(BaseModel):
+    chr: str
+    pos: int
+    ref: str
+    alt: str
 
 '''
 def add_n_closest_elements(
@@ -138,11 +143,11 @@ class AnnotatedVariant(BaseModel):
     variant_length: int
     variant_type: str
     region_type: str
-    nearest_genes: List[str]
+    nearest_genes: List[Tuple[str, int]]
     gene_within_100kb: bool
 
 
-def annotate_variant(variant):
+def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
     """Takes in a Variant and returns an AnnotatedVariant."""
     # Get basic data from variant
     var_chr = variant.chr
@@ -168,7 +173,7 @@ def annotate_variant(variant):
         var_chr, var_pos, num_genes=3
     )
     # Instantiate AnnotatedVariant
-    var = AnnotatedVariant(
+    return AnnotatedVariant(
         chr=var_chr,
         pos=var_pos,
         ref=var_ref,
@@ -182,18 +187,9 @@ def annotate_variant(variant):
         gene_within_100kb=var_gene_within_100kb,
     )
 
-    return var
-
 
 if __name__ == "__main__":
-
-    class TestVariant(BaseModel):
-        chr: str
-        pos: int
-        ref: str
-        alt: str
-
-    tv = TestVariant(chr="chr7", pos=27220000, ref="A", alt="TT")
+    tv = VariantAnnotationInput(chr="chr7", pos=27220000, ref="A", alt="TT")
     print(tv)
     av = annotate_variant(tv)
     print(av)

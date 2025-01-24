@@ -1,0 +1,39 @@
+# Use the official Python image as the base
+FROM python:3.9
+
+RUN apt update \
+    && apt install -y --no-install-recommends \
+        build-essential \
+        libpq-dev \
+        curl \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+RUN useradd --no-create-home --gid root runner
+
+ENV UV_PYTHON_PREFERENCE=only-system
+ENV UV_NO_CACHE=true
+
+# Set the working directory
+WORKDIR /code
+
+# Copy the requirements files
+COPY pyproject.toml .
+COPY uv.lock .
+
+# Install dependencies
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN uv sync --all-extras --frozen --no-install-project
+
+# Copy the application files
+COPY . .
+
+# Expose the port your FastAPI app runs on
+EXPOSE 8000
+
+# Start the FastAPI application
+ENV PATH="/code/.venv/bin:$PATH"
+CMD ["uvicorn", "service.server:app", "--host", "0.0.0.0", "--port", "8001"]

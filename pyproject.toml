@@ -10,6 +10,8 @@ version = "0.0.1a"
 requires-python = ">= 3.8, < 3.10"
 dependencies = [
 	"deeplift>=0.6.13.0",
+	"fastapi>=0.103.2",
+	"intervaltree>=3.1.0",
 	"numpy>=1.24.3",
 	"pandas>=2.0.3",
 	"polars==1.8.2",
@@ -20,6 +22,7 @@ dependencies = [
 	"tensorflow>=2.13.1",
 	"tensorflow-probability>=0.21.0",
 	"tf-keras>=2.15.0",
+	"uvicorn>=0.33.0",
 ]
 keywords = ["variant scoring", "variant effect", "variant prioritization", "variant", "scoring", "effect", "prioritization", "genomics", "chrombpnet"]
 
