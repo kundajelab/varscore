@@ -1,20 +1,69 @@
-from deeplift.dinuc_shuffle import dinuc_shuffle
+# from deeplift.dinuc_shuffle import dinuc_shuffle
 import numpy as np
 import pandas as pd
-import shap
+# import shap
 import tensorflow as tf
+tf.compat.v1.disable_eager_execution()
+from tensorflow.keras.utils import get_custom_objects
+from tensorflow.keras.models import load_model
 import tensorflow_probability as tfp
 
 
-# THESE ARE ALL FUNCTIONS TAKEN FROM THE CHROMBPNET REPO
+###################
+# USING THE MODEL #
+###################
+def load_chrombpnet(model_loc: str) -> tf.keras.Model:
+    """Loads a ChromBPNet model."""
+    custom_objects = {"multinomial_nll": _multinomial_nll, "tf": tf}
+    get_custom_objects().update(custom_objects)
+    model = load_model(model_hdf5, compile=False)
+    return model
 
 
-###
-# SEQUENCE FUNCTIONS
-###
+def predict(
+    model: tf.keras.Model, seqs: np.ndarray, batch_size: int = 64
+) -> tuple[np.ndarray, np.ndarray]:
+    """Make predictions on sequences."""
+    pred_logits_batches, pred_logcts_batches = [], []
+    for i in range(0, seqs.shape[0], batch_size):
+        seq_batch = seqs[i : i + batch_size]
+        pred_logits_i, pred_logcts_i = model.predict_on_batch(seq_batch)
+        pred_logits_batches.append(pred_logits_i)
+        pred_logcts_batches.append(pred_logcts_i)
+    pred_logits = np.vstack(pred_logits_batches)
+    pred_logcts = np.vstack(pred_logcts_batches)
+    return pred_logits, pred_logcts
+
+
+def _multinomial_nll(true_counts, logits):
+    """
+    TAKEN FROM CHROMBPNET.TRAINING.UTILS.LOSSES.PY
+
+    Compute the multinomial negative log-likelihood
+    Args:
+    true_counts: observed count values
+    logits: predicted logit values
+    """
+    counts_per_example = tf.reduce_sum(true_counts, axis=-1)
+    dist = tfp.distributions.Multinomial(total_count=counts_per_example, logits=logits)
+    return -tf.reduce_sum(dist.log_prob(true_counts)) / tf.cast(
+        tf.shape(true_counts)[0], dtype=tf.float32
+    )
+
+
+def model_is_valid(model: tf.keras.Model) -> bool:
+    """Checks that a ChromBPNet model is valid."""
+    # TODO: IMPLEMENT (Not sure what to do for this, maybe check input size?)
+    return True
+
+
+#######################
+# SEQUENCE GENERATION #
+#######################
 def dna_to_one_hot(seqs):
     """
     TAKEN FROM CHROMBPNET.TRAINING.UTILS.ONE_HOT.PY
+
     Converts a list of DNA ("ACGT") sequences to one-hot encodings, where the
     position of 1s is ordered alphabetically by "ACGT". `seqs` must be a list
     of N strings, where every string is the same length L. Returns an N x L x 4
@@ -38,27 +87,10 @@ def dna_to_one_hot(seqs):
     return one_hot_map[base_inds[:-4]].reshape((len(seqs), seq_len, 4))
 
 
-###
-# MODEL FUNCTIONS
-###
-def multinomial_nll(true_counts, logits):
-    """
-    TAKEN FROM CHROMBPNET.TRAINING.UTILS.LOSSES.PY
-    Compute the multinomial negative log-likelihood
-    Args:
-    true_counts: observed count values
-    logits: predicted logit values
-    """
-    counts_per_example = tf.reduce_sum(true_counts, axis=-1)
-    dist = tfp.distributions.Multinomial(total_count=counts_per_example, logits=logits)
-    return -tf.reduce_sum(dist.log_prob(true_counts)) / tf.cast(
-        tf.shape(true_counts)[0], dtype=tf.float32
-    )
-
-
-###
-# SHAP FUNCTIONS
-###
+'''
+##################
+# SHAP FUNCTIONS #
+##################
 def shuffle_several_times(s, numshuffles=20):
     """
     TAKEN FROM CHROMBPNET.EVALUATION.INTERPRET.SHAP_UTILS.PY
@@ -115,3 +147,4 @@ def combine_mult_and_diffref(mult, orig_inp, bg_data):
         to_return.append(np.zeros_like(orig_inp[1]))
 
     return to_return
+'''

@@ -1,8 +1,11 @@
-import polars as pl
 import pandas as pd
+import polars as pl
 import pybedtools
-from typing import List, Tuple
 from pybedtools import BedTool
+from pydantic import BaseModel
+from typing import List, Tuple
+
+import region_utils
 
 
 def add_n_closest_elements(
@@ -120,3 +123,60 @@ def add_closest_elements_in_window(
             }
         )
     return closests_pl
+
+
+class AnnotatedVariant(BaseModel):
+    chr: str
+    pos: int
+    ref: str
+    alt: str
+    ref_length: int
+    alt_length: int
+    variant_length: int
+    variant_type: str
+    region_type: str
+    nearest_genes: list[str]
+    gene_within_100kb: bool
+
+
+def annotate_variant(variant):
+    """Takes in a Variant and returns an AnnotatedVariant.
+    """
+    # Instantiate AnnotatedVariant
+    var = AnnotatedVariant()
+    # Get basic data from variant
+    var.chro = variant.chr
+    var.pos = variant.pos
+    var.ref = variant.ref
+    var.alt = variant.alt
+    # Compute new info
+    var.ref_length = len(var.ref)
+    var.alt_length = len(var.alt)
+    var.variant_length = max(len(var.ref), len(var.alt))
+    
+    if var.alt_length > var.ref_length:
+        var.variant_type = "insertion"
+    elif var.alt_length < var.ref_length:
+        var.variant_type = "deletion"
+    else:
+        var.variant_type = "SNV" if var.ref_length == 1 else "substitution"
+
+    var.region_type = region_utils.region_type(var.chr, var.pos, var.pos + var.ref_length-1)
+    var.nearest_gene, var.gene_within_100kb = region_utils.nearest_genes(var.chro, var.pos, num_genes=3)
+    return var
+
+
+if __name__ == "__main__":
+    class TestVariant(BaseModel):
+        chr: str
+        pos: int
+        ref: str
+        alt: str
+
+    tv = TestVariant()
+    tv.chr = "chr7"
+    tv.pos = "27220000"
+    tv.ref = "A"
+    tv.alt = "TT"
+
+    print(tv)
