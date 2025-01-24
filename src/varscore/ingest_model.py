@@ -51,9 +51,7 @@ def ingest_model(model_info_dict: dict[str, str], peaks_dist_save_dir: str) -> b
     return True
 
 
-def _ingest_fold(
-    model_loc: str, peaks_loc: str, genome_loc: str
-) -> np.ndarray | None:
+def _ingest_fold(model_loc: str, peaks_loc: str, genome_loc: str) -> np.ndarray | None:
     """Initial processing of a single fold of a model.
 
     Checks that the model is valid. Then, produces the peak distribution.

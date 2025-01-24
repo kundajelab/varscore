@@ -1,13 +1,15 @@
 import pandas as pd
-import polars as pl
-import pybedtools
-from pybedtools import BedTool
+
+# import polars as pl
+# import pybedtools
+# from pybedtools import BedTool
 from pydantic import BaseModel
 from typing import List, Tuple
 
 import region_utils
 
 
+'''
 def add_n_closest_elements(
     variants_bed_df: pl.DataFrame,
     elements_bed_file: str,
@@ -123,6 +125,7 @@ def add_closest_elements_in_window(
             }
         )
     return closests_pl
+'''
 
 
 class AnnotatedVariant(BaseModel):
@@ -135,48 +138,62 @@ class AnnotatedVariant(BaseModel):
     variant_length: int
     variant_type: str
     region_type: str
-    nearest_genes: list[str]
+    nearest_genes: List[str]
     gene_within_100kb: bool
 
 
 def annotate_variant(variant):
-    """Takes in a Variant and returns an AnnotatedVariant.
-    """
-    # Instantiate AnnotatedVariant
-    var = AnnotatedVariant()
+    """Takes in a Variant and returns an AnnotatedVariant."""
     # Get basic data from variant
-    var.chro = variant.chr
-    var.pos = variant.pos
-    var.ref = variant.ref
-    var.alt = variant.alt
+    var_chr = variant.chr
+    var_pos = variant.pos
+    var_ref = variant.ref
+    var_alt = variant.alt
     # Compute new info
-    var.ref_length = len(var.ref)
-    var.alt_length = len(var.alt)
-    var.variant_length = max(len(var.ref), len(var.alt))
-    
-    if var.alt_length > var.ref_length:
-        var.variant_type = "insertion"
-    elif var.alt_length < var.ref_length:
-        var.variant_type = "deletion"
-    else:
-        var.variant_type = "SNV" if var.ref_length == 1 else "substitution"
+    var_ref_length = len(var_ref)
+    var_alt_length = len(var_alt)
+    var_variant_length = max(len(var_ref), len(var_alt))
 
-    var.region_type = region_utils.region_type(var.chr, var.pos, var.pos + var.ref_length-1)
-    var.nearest_gene, var.gene_within_100kb = region_utils.nearest_genes(var.chro, var.pos, num_genes=3)
+    if var_alt_length > var_ref_length:
+        var_variant_type = "insertion"
+    elif var_alt_length < var_ref_length:
+        var_variant_type = "deletion"
+    else:
+        var_variant_type = "SNV" if var_ref_length == 1 else "substitution"
+
+    var_region_type = region_utils.region_type(
+        var_chr, var_pos, var_pos + var_ref_length - 1
+    )
+    var_nearest_genes, var_gene_within_100kb = region_utils.nearest_genes(
+        var_chr, var_pos, num_genes=3
+    )
+    # Instantiate AnnotatedVariant
+    var = AnnotatedVariant(
+        chr=var_chr,
+        pos=var_pos,
+        ref=var_ref,
+        alt=var_alt,
+        ref_length=var_ref_length,
+        alt_length=var_alt_length,
+        variant_length=var_variant_length,
+        variant_type=var_variant_type,
+        region_type=var_region_type,
+        nearest_genes=var_nearest_genes,
+        gene_within_100kb=var_gene_within_100kb,
+    )
+
     return var
 
 
 if __name__ == "__main__":
+
     class TestVariant(BaseModel):
         chr: str
         pos: int
         ref: str
         alt: str
 
-    tv = TestVariant()
-    tv.chr = "chr7"
-    tv.pos = "27220000"
-    tv.ref = "A"
-    tv.alt = "TT"
-
+    tv = TestVariant(chr="chr7", pos=27220000, ref="A", alt="TT")
     print(tv)
+    av = annotate_variant(tv)
+    print(av)

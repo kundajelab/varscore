@@ -112,5 +112,3 @@ if __name__ == "__main__":
     prio = prioritize_variants(df)
     print(prio)
     print(prio[["prioritized", "most_active_celltype", "most_active_celltype_logfc"]])
-
-
