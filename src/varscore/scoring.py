@@ -9,7 +9,11 @@ import chrombpnet_utils
 # CORE FUNCTIONS #
 ##################
 def score_variants(
-    model_loc: str, variants_loc: str, genome_loc: str, peaks_dist_loc: str, save_loc: str
+    model_loc: str,
+    variants_loc: str,
+    genome_loc: str,
+    peaks_dist_loc: str,
+    save_loc: str,
 ) -> None:
     """Score variants through a model.
 
@@ -103,18 +107,35 @@ def main(args):
     # Call the ingest_model function with arguments
     args = _parse_args()
     score_variants(
-        args.model_loc, args.variants_loc, args.genome_loc,
-        args.peaks_dist_loc, args.save_loc
+        args.model_loc,
+        args.variants_loc,
+        args.genome_loc,
+        args.peaks_dist_loc,
+        args.save_loc,
     )
 
 
 def _parse_args():
-    parser = argparse.ArgumentParser(description="Score variants using a trained model and associated data.")
-    parser.add_argument("--model_loc", required=True, help="Location of the model file.")
-    parser.add_argument("--variants_loc", required=True, help="Location of the variants file.")
-    parser.add_argument("--genome_loc", required=True, help="Location of the genome file.")
-    parser.add_argument("--peaks_dist_loc", required=True, help="Location of the peaks distribution file.")
-    parser.add_argument("--save_loc", required=True, help="Location to save the results.")
+    parser = argparse.ArgumentParser(
+        description="Score variants using a trained model and associated data."
+    )
+    parser.add_argument(
+        "--model_loc", required=True, help="Location of the model file."
+    )
+    parser.add_argument(
+        "--variants_loc", required=True, help="Location of the variants file."
+    )
+    parser.add_argument(
+        "--genome_loc", required=True, help="Location of the genome file."
+    )
+    parser.add_argument(
+        "--peaks_dist_loc",
+        required=True,
+        help="Location of the peaks distribution file.",
+    )
+    parser.add_argument(
+        "--save_loc", required=True, help="Location to save the results."
+    )
     return parser.parse_args()
 
 

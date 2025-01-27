@@ -8,11 +8,13 @@ from typing import List, Tuple
 
 import src.varscore.region_utils as region_utils
 
+
 class VariantAnnotationInput(BaseModel):
     chr: str
     pos: int
     ref: str
     alt: str
+
 
 '''
 def add_n_closest_elements(

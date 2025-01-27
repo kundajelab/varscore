@@ -9,9 +9,15 @@ import src.varscore.chrombpnet_utils as chrombpnet_utils
 # CORE FUNCTIONS #
 ##################
 def ingest_model(
-    peaks_loc: str, genome_loc: str,
-    fold_0_loc: str, fold_1_loc: str, fold_2_loc: str, fold_3_loc: str, fold_4_loc: str,
-    output_dir: str) -> bool:
+    peaks_loc: str,
+    genome_loc: str,
+    fold_0_loc: str,
+    fold_1_loc: str,
+    fold_2_loc: str,
+    fold_3_loc: str,
+    fold_4_loc: str,
+    output_dir: str,
+) -> bool:
     """Initial processing of 5 folds of a model.
 
     Attempts to ingest each of 5 folds. If all 5 folds ingest successfully,
@@ -122,24 +128,35 @@ def main(args):
     # Call the ingest_model function with arguments
     args = _parse_args()
     success = ingest_model(
-        args.peaks_loc, args.genome_loc,
-        args.fold_0_loc, args.fold_1_loc, args.fold_2_loc, 
-        args.fold_3_loc, args.fold_4_loc, args.output_dir
+        args.peaks_loc,
+        args.genome_loc,
+        args.fold_0_loc,
+        args.fold_1_loc,
+        args.fold_2_loc,
+        args.fold_3_loc,
+        args.fold_4_loc,
+        args.output_dir,
     )
-    if !success:
+    if not success:
         raise RuntimeError("Model ingestion failed.")
 
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="Ingest a model and associated data.")
-    parser.add_argument("--peaks_loc", required=True, help="Location of the peaks file.")
-    parser.add_argument("--genome_loc", required=True, help="Location of the genome file.")
+    parser.add_argument(
+        "--peaks_loc", required=True, help="Location of the peaks file."
+    )
+    parser.add_argument(
+        "--genome_loc", required=True, help="Location of the genome file."
+    )
     parser.add_argument("--fold_0_loc", required=True, help="Location of fold 0 file.")
     parser.add_argument("--fold_1_loc", required=True, help="Location of fold 1 file.")
     parser.add_argument("--fold_2_loc", required=True, help="Location of fold 2 file.")
     parser.add_argument("--fold_3_loc", required=True, help="Location of fold 3 file.")
     parser.add_argument("--fold_4_loc", required=True, help="Location of fold 4 file.")
-    parser.add_argument("--output_dir", required=True, help="Directory to save peaks distribution data.")
+    parser.add_argument(
+        "--output_dir", required=True, help="Directory to save peaks distribution data."
+    )
     return parser.parse_args()
 
 
