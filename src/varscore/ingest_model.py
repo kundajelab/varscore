@@ -2,38 +2,38 @@ import numpy as np
 import pandas as pd
 import pyfaidx
 
-import chrombpnet_utils
+import src.varscore.chrombpnet_utils as chrombpnet_utils
 
 
-def ingest_model(model_info_dict: dict[str, str], peaks_dist_save_dir: str) -> bool:
+##################
+# CORE FUNCTIONS #
+##################
+def ingest_model(
+    peaks_loc: str, genome_loc: str,
+    fold_0_loc: str, fold_1_loc: str, fold_2_loc: str, fold_3_loc: str, fold_4_loc: str,
+    output_dir: str) -> bool:
     """Initial processing of 5 folds of a model.
 
     Attempts to ingest each of 5 folds. If all 5 folds ingest successfully,
       will save their peak distributions. Returns a boolean success flag.
 
     Args:
-        model_info_dir: A dictionary that has all information about a model. In
-          particular, it has information about each fold's locaqtion, the model
-          name, the peak location, and the genome location.
-        peaks_dist_save_dir: The directory in which peak distributions are
+        peaks_loc: The path to the peaks file.
+        genome_loc: The path to the genomes files.
+        fold_0_loc: The path to the fold 0 weights.
+        fold_1_loc: The path to the fold 1 weights.
+        fold_2_loc: The path to the fold 2 weights.
+        fold_3_loc: The path to the fold 3 weights.
+        fold_4_loc: The path to the fold 4 weights.
+        output_dir: The directory in which peak distributions are
           saved.
     """
-    # Verify that model_info_dict has the correct keys
-    expected_keys = ["model_name", "peaks_loc", "genome_loc"] + [
-        f"fold_{i}_loc" for i in range(5)
-    ]
-    for k in expected_keys:
-        if key not in model_info_dict:
-            raise KeyError(f"model_info_dict is missing key {k}")
     # Ingest each fold
+    model_folds = [fold_0_loc, fold_1_loc, fold_2_loc, fold_3_loc, fold_4_loc]
     folds_ingested_successfully = True
     peak_dists = []
     for i in range(5):
-        peak_dist_fold_i = _ingest_fold(
-            model_info_dict[f"fold_{i}_loc"],
-            model_info_dict["peaks_loc"],
-            model_info_dict["genome_loc"],
-        )
+        peak_dist_fold_i = _ingest_fold(model_folds[i], peaks_loc, genome_loc)
         if peak_dist_fold_i is None:
             folds_ingested_successfully = False
             break
@@ -41,10 +41,10 @@ def ingest_model(model_info_dict: dict[str, str], peaks_dist_save_dir: str) -> b
             peak_dists.append(peak_dist_fold_i)
     # Save peak distributions if folds ingested successfully
     if not folds_ingested_successfully:
-        return True
+        return False
     for i in range(5):
         np.save(
-            f"{peaks_dist_save_dir}/{model_info_dict['model_name']}_fold_{i}.npy",
+            f"{output_dir}/fold_{i}.npy",
             peak_dists[i],
         )
     # TODO: Save peak DNATree
@@ -82,7 +82,7 @@ def _get_peaks_distribution(
     if N < 1000:
         raise ValueError("The number of peaks must be greater than 1000.")
     peak_seqs = _get_peak_seqs(peaks_df, genome_loc)
-    _, peak_logcts = predict(model, peak_seqs)
+    _, peak_logcts = utils_chrombpnet.predict(model, peak_seqs)
     sorted_peak_logcts = np.sort(peak_logcts)
     peak_distribution = [sorted_peak_logcts[int(i * N / 1000)] for i in range(1000)]
     return peak_distribution
@@ -113,3 +113,35 @@ def _get_peak_seqs(peaks_df: pd.DataFrame, genome_loc: str, width=2114) -> np.nd
         sequences.append(seqs)
     onehot = chrombpnet_utils.dna_to_one_hot(sequences)
     return onehot
+
+
+########
+# MAIN #
+########
+def main(args):
+    # Call the ingest_model function with arguments
+    args = _parse_args()
+    success = ingest_model(
+        args.peaks_loc, args.genome_loc,
+        args.fold_0_loc, args.fold_1_loc, args.fold_2_loc, 
+        args.fold_3_loc, args.fold_4_loc, args.output_dir
+    )
+    if !success:
+        raise RuntimeError("Model ingestion failed.")
+
+
+def _parse_args():
+    parser = argparse.ArgumentParser(description="Ingest a model and associated data.")
+    parser.add_argument("--peaks_loc", required=True, help="Location of the peaks file.")
+    parser.add_argument("--genome_loc", required=True, help="Location of the genome file.")
+    parser.add_argument("--fold_0_loc", required=True, help="Location of fold 0 file.")
+    parser.add_argument("--fold_1_loc", required=True, help="Location of fold 1 file.")
+    parser.add_argument("--fold_2_loc", required=True, help="Location of fold 2 file.")
+    parser.add_argument("--fold_3_loc", required=True, help="Location of fold 3 file.")
+    parser.add_argument("--fold_4_loc", required=True, help="Location of fold 4 file.")
+    parser.add_argument("--output_dir", required=True, help="Directory to save peaks distribution data.")
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    main()
