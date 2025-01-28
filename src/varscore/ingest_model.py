@@ -1,6 +1,9 @@
+from typing import Union
 import numpy as np
 import pandas as pd
 import pyfaidx
+import argparse
+import tensorflow as tf
 
 import src.varscore.chrombpnet_utils as chrombpnet_utils
 
@@ -56,8 +59,7 @@ def ingest_model(
     # TODO: Save peak DNATree
     return True
 
-
-def _ingest_fold(model_loc: str, peaks_loc: str, genome_loc: str) -> np.ndarray | None:
+def _ingest_fold(model_loc: str, peaks_loc: str, genome_loc: str) -> Union[np.ndarray, None]:
     """Initial processing of a single fold of a model.
 
     Checks that the model is valid. Then, produces the peak distribution.
@@ -88,7 +90,7 @@ def _get_peaks_distribution(
     if N < 1000:
         raise ValueError("The number of peaks must be greater than 1000.")
     peak_seqs = _get_peak_seqs(peaks_df, genome_loc)
-    _, peak_logcts = utils_chrombpnet.predict(model, peak_seqs)
+    _, peak_logcts = chrombpnet_utils.predict(model, peak_seqs)
     sorted_peak_logcts = np.sort(peak_logcts)
     peak_distribution = [sorted_peak_logcts[int(i * N / 1000)] for i in range(1000)]
     return peak_distribution
@@ -108,7 +110,7 @@ def _load_peaks(peaks_loc: str) -> pd.DataFrame:
 def _get_peak_seqs(peaks_df: pd.DataFrame, genome_loc: str, width=2114) -> np.ndarray:
     """Get one-hot encoded peak sequences from a DataFrame of peaks."""
     sequences = []
-    for _, row in regions.iterrows():
+    for _, row in peaks_df.iterrows():
         chro, window_start, window_end = (
             row["chro"],
             row["window_start"],
@@ -124,21 +126,6 @@ def _get_peak_seqs(peaks_df: pd.DataFrame, genome_loc: str, width=2114) -> np.nd
 ########
 # MAIN #
 ########
-def main(args):
-    # Call the ingest_model function with arguments
-    args = _parse_args()
-    success = ingest_model(
-        args.peaks_loc,
-        args.genome_loc,
-        args.fold_0_loc,
-        args.fold_1_loc,
-        args.fold_2_loc,
-        args.fold_3_loc,
-        args.fold_4_loc,
-        args.output_dir,
-    )
-    if not success:
-        raise RuntimeError("Model ingestion failed.")
 
 
 def _parse_args():
@@ -159,6 +146,24 @@ def _parse_args():
     )
     return parser.parse_args()
 
+def main():
+    # Call the ingest_model function with arguments
+    args = _parse_args()
+    print('------------------')
+    print(args)
+    print('------------------')
+    success = ingest_model(
+        args.peaks_loc,
+        args.genome_loc,
+        args.fold_0_loc,
+        args.fold_1_loc,
+        args.fold_2_loc,
+        args.fold_3_loc,
+        args.fold_4_loc,
+        args.output_dir,
+    )
+    if not success:
+        raise RuntimeError("Model ingestion failed.")
 
 if __name__ == "__main__":
     main()
