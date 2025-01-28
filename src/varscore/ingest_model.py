@@ -110,15 +110,16 @@ def _load_peaks(peaks_loc: str) -> pd.DataFrame:
 def _get_peak_seqs(peaks_df: pd.DataFrame, genome_loc: str, width=2114) -> np.ndarray:
     """Get one-hot encoded peak sequences from a DataFrame of peaks."""
     sequences = []
-    for _, row in peaks_df.iterrows():
-        chro, window_start, window_end = (
-            row["chro"],
-            row["window_start"],
-            row["window_end"],
-        )
-        seq = str(genome[chro][window_start:window_stop])
-        assert len(seq) == width
-        sequences.append(seqs)
+    with pyfaidx.Fasta(genome_loc) as genome:
+        for _, row in peaks_df.iterrows():
+            chro, window_start, window_end = (
+                row["chro"],
+                row["window_start"],
+                row["window_end"],
+            )
+            seq = str(genome[chro][window_start:window_stop])
+            assert len(seq) == width
+            sequences.append(seqs)
     onehot = chrombpnet_utils.dna_to_one_hot(sequences)
     return onehot
 
