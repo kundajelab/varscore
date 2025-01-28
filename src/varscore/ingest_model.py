@@ -117,9 +117,9 @@ def _get_peak_seqs(peaks_df: pd.DataFrame, genome_loc: str, width=2114) -> np.nd
                 row["window_start"],
                 row["window_end"],
             )
-            seq = str(genome[chro][window_start:window_stop])
+            seq = str(genome[chro][window_start:window_end])
             assert len(seq) == width
-            sequences.append(seqs)
+            sequences.append(seq)
     onehot = chrombpnet_utils.dna_to_one_hot(sequences)
     return onehot
 
@@ -150,9 +150,6 @@ def _parse_args():
 def main():
     # Call the ingest_model function with arguments
     args = _parse_args()
-    print('------------------')
-    print(args)
-    print('------------------')
     success = ingest_model(
         args.peaks_loc,
         args.genome_loc,
