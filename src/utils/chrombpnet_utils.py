@@ -5,7 +5,7 @@ import pandas as pd
 import shap
 import tensorflow as tf
 
-tf.compat.v1.disable_eager_execution()
+
 from tensorflow.keras.utils import get_custom_objects
 from tensorflow.keras.models import load_model
 import tensorflow_probability as tfp
@@ -26,6 +26,7 @@ def predict(
     model: tf.keras.Model, seqs: np.ndarray, batch_size: int = 64
 ) -> tuple[np.ndarray, np.ndarray]:
     """Make predictions on sequences."""
+    tf.compat.v1.enable_eager_execution()
     pred_logits_batches, pred_logcts_batches = [], []
     for i in range(0, seqs.shape[0], batch_size):
         seq_batch = seqs[i : i + batch_size]
@@ -39,6 +40,7 @@ def predict(
 
 def deepshap(model: tf.keras.Model, seqs: np.ndarray) ->  np.ndarray, np.ndarray:
     """Compute counts DeepSHAPs on sequences."""
+    tf.compat.v1.disable_eager_execution()
     counts_explainer = shap.explainers.deep.TFDeepExplainer((model.input, tf.reduce_sum(model.outputs[1], axis=-1)), shuffle_several_times, combine_mult_and_diffref=combine_mult_and_diffref)
     counts_deepshaps = counts_explainer.shap_values(seqs, progress_message=100)
     observed_counts_deepshaps = (seqs*counts_deepshaps).astype(np.float16)
