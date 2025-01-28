@@ -1,11 +1,13 @@
 import pandas as pd
-# import polars as pl
-# import pybedtools
-# from pybedtools import BedTool
 from pydantic import BaseModel
+
 from typing import List, Tuple
 
 import src.utils.region_utils as region_utils
+
+# import polars as pl
+# import pybedtools
+# from pybedtools import BedTool
 
 
 class VariantAnnotationInput(BaseModel):

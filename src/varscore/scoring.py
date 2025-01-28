@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
+from scipy.spatial.distance import jensenshannon
 from scipy.stats import binom
+
 import argparse
 import os
 
@@ -40,7 +42,7 @@ def score_variants(
     alt_pred_logits, alt_pred_logcts = chrombpnet_utils.predict(model, alt_seqs)
     # Compute scores
     peaks_dist = np.load(peaks_dist_loc)
-    scores = _scores_from_preds(ref_pred_logcts, alt_pred_logcts, peaks_dist)
+    scores = _scores_from_preds(ref_pred_logcts, ref_pred_logits, alt_pred_logcts, alt_pred_logits, peaks_dist)
     # Save
     variant_df = io_utils.load_variants(variants_loc)
     for score_name, score_vals in scores.items():
@@ -50,7 +52,7 @@ def score_variants(
 
 
 def _scores_from_preds(
-    ref_logcts: np.ndarray, alt_logcts: np.ndarray, peaks_dist: np.ndarray
+    ref_logcts: np.ndarray, ref_logits: np.ndarray, alt_logcts: np.ndarray, alt_logits: np.ndarray, peaks_dist: np.ndarray
 ) -> dict[str, np.ndarray]:
     """Compute scores based on logcount predictions."""
     scores_dict = dict()
@@ -58,7 +60,13 @@ def _scores_from_preds(
     scores_dict["lfc"] = (alt_logcts - ref_logcts) / np.exp(2)
     # LFC p-Value
     scores_dict["lfc-pval"] = _compute_lfc_pval(ref_logcts, alt_logcts)
-    # Active allele percentile
+    # JSD
+    ref_exp_logits = np.exp(ref_logits)
+    ref_profile = ref_exp_logits/np.sum(ref_exp_logits, axis=1, keepdims=True)
+    alt_exp_logits = np.exp(alt_logits)
+    alt_profile = alt_exp_logits/np.sum(alt_exp_logits, axis=1, keepdims=True)
+    scores_dict["jsd"] = np.squeeze([jensenshannon(x, y, base=2.0) for x, y in zip(ref_profile, alt_profile)])
+    # Active allele quantile
     ref_quantiles = np.searchsorted(peaks_dist, ref_logcts) / len(peaks_dist)
     alt_quantiles = np.searchsorted(peaks_dist, alt_logcts) / len(peaks_dist)
     scores_dict["active-allele-quantile"] = np.maximum(ref_quantiles, alt_quantiles)
