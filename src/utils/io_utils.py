@@ -4,10 +4,14 @@ import pyfaidx
 import src.utils.chrombpnet_utils as chrombpnet_utils
 
 
-def get_peak_seqs(peaks_loc, genome_loc):
+def get_peak_seqs(peaks_loc, genome_loc, width=2114):
     """Get one-hot encoded peak sequences from peaks."""
     # Load peaks DataFrame
     peaks_df = load_peaks(peaks_loc)
+    flank_size = width // 2
+    peaks_df["summit_pos"] = peaks_df["start"] + peaks_df["summit"]
+    peaks_df["window_start"] = peaks_df["summit_pos"] - flank_size
+    peaks_df["window_end"] = peaks_df["summit_pos"] + flank_size
     # Load sequences
     sequences = []
     with pyfaidx.Fasta(genome_loc) as genome:
@@ -28,11 +32,7 @@ def get_peak_seqs(peaks_loc, genome_loc):
 def load_peaks(peaks_loc: str) -> pd.DataFrame:
     """Load a peaks DataFrame, add window start/stop columns."""
     NARROWPEAK_SCHEMA = ["chro", "start", "end", "4", "5", "6", "7", "8", "9", "summit"]
-    flank_size = 2114 // 2
     peaks_df = pd.read_csv(peaks_loc, sep="\t", names=NARROWPEAK_SCHEMA)
-    peaks_df["summit_pos"] = peaks_df["start"] + peaks_df["summit"]
-    peaks_df["window_start"] = peaks_df["summit"] - flank_size
-    peaks_df["window_end"] = peaks_df["summit"] + flank_size
     return peaks_df
 
 
