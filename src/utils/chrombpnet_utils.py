@@ -1,8 +1,8 @@
-# from deeplift.dinuc_shuffle import dinuc_shuffle
+from deeplift.dinuc_shuffle import dinuc_shuffle
 import numpy as np
 import pandas as pd
 
-# import shap
+import shap
 import tensorflow as tf
 
 tf.compat.v1.disable_eager_execution()
@@ -35,6 +35,14 @@ def predict(
     pred_logits = np.vstack(pred_logits_batches)
     pred_logcts = np.vstack(pred_logcts_batches)
     return pred_logits, pred_logcts
+
+
+def deepshap(model: tf.keras.Model, seqs: np.ndarray) ->  np.ndarray, np.ndarray:
+    """Compute counts DeepSHAPs on sequences."""
+    counts_explainer = shap.explainers.deep.TFDeepExplainer((model.input, tf.reduce_sum(model.outputs[1], axis=-1)), shuffle_several_times, combine_mult_and_diffref=combine_mult_and_diffref)
+    counts_deepshaps = counts_explainer.shap_values(seqs, progress_message=100)
+    observed_counts_deepshaps = (seqs*counts_deepshaps).astype(np.float16)
+    return observed_counts_deepshaps
 
 
 def _multinomial_nll(true_counts, logits):
@@ -89,7 +97,6 @@ def dna_to_one_hot(seqs):
     return one_hot_map[base_inds[:-4]].reshape((len(seqs), seq_len, 4))
 
 
-'''
 ##################
 # SHAP FUNCTIONS #
 ##################
@@ -97,6 +104,7 @@ def shuffle_several_times(s, numshuffles=20):
     """
     TAKEN FROM CHROMBPNET.EVALUATION.INTERPRET.SHAP_UTILS.PY
     """
+
     if len(s) == 2:
         return [
             np.array([dinuc_shuffle(s[0]) for i in range(numshuffles)]),
@@ -149,4 +157,3 @@ def combine_mult_and_diffref(mult, orig_inp, bg_data):
         to_return.append(np.zeros_like(orig_inp[1]))
 
     return to_return
-'''

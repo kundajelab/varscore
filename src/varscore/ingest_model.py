@@ -6,6 +6,7 @@ import argparse
 import tensorflow as tf
 
 import src.utils.chrombpnet_utils as chrombpnet_utils
+import src.utils.io_utils as io_utils
 
 
 ##################
@@ -85,46 +86,15 @@ def _get_peaks_distribution(
     model: tf.keras.Model, peaks_loc: str, genome_loc: str
 ) -> np.ndarray:
     """Computes a 1000-dimensional distribution of peak logcounts from a model."""
-    peaks_df = _load_peaks(peaks_loc)
-    N = len(peaks_df)
-    if N < 1000:
+    peak_seqs = io_utils.get_peak_seqs(peaks_loc, genome_loc)
+    if peak_seqs.shape[0] < 1000:
         raise ValueError("The number of peaks must be greater than 1000.")
-    # Get sequences
-    with pyfaidx.Fasta(genome_loc) as genome:
-        peak_seqs = _get_peak_seqs(peaks_df, genome)
     # Forward pass on sequences
     _, peak_logcts = chrombpnet_utils.predict(model, peak_seqs)
     # Peak distribuion
     sorted_peak_logcts = np.sort(peak_logcts)
     peak_distribution = [sorted_peak_logcts[int(i * N / 1000)] for i in range(1000)]
     return peak_distribution
-
-
-def _load_peaks(peaks_loc: str) -> pd.DataFrame:
-    """Load a peaks DataFrame, add window start/stop columns."""
-    NARROWPEAK_SCHEMA = ["chro", "start", "end", "4", "5", "6", "7", "8", "9", "summit"]
-    flank_size = 2114 // 2
-    peaks_df = pd.read_csv(peaks_loc, sep="\t", names=NARROWPEAK_SCHEMA)
-    peaks_df["summit_pos"] = peaks_df["start"] + peaks_df["summit"]
-    peaks_df["window_start"] = peaks_df["summit"] - flank_size
-    peaks_df["window_end"] = peaks_df["summit"] + flank_size
-    return peaks_df
-
-
-def _get_peak_seqs(peaks_df: pd.DataFrame, genome, width=2114) -> np.ndarray:
-    """Get one-hot encoded peak sequences from a DataFrame of peaks."""
-    sequences = []
-    for _, row in peaks_df.iterrows():
-        chro, window_start, window_end = (
-            row["chro"],
-            row["window_start"],
-            row["window_end"],
-        )
-        seq = str(genome[chro][window_start:window_end])
-        assert len(seq) == width
-        sequences.append(seq)
-    onehot = chrombpnet_utils.dna_to_one_hot(sequences)
-    return onehot
 
 
 ########

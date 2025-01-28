@@ -3,6 +3,7 @@ import pandas as pd
 from scipy.stats import binom
 
 import src.utils.chrombpnet_utils as chrombpnet_utils
+import src.utils.io_utils as io_utils
 
 
 ##################
@@ -28,11 +29,8 @@ def score_variants(
         peaks_dist_loc: The path to the model's peak distribution.
         save_loc: The path to save the scores dataframe.
     """
-    # Load variants
-    variants_df = _load_variants(variants_loc)
     # Get reference and alternate sequences
-    with pyfaidx.Fasta(genome_loc) as genome:
-        ref_seqs, alt_seqs = _get_variant_seqs(variants_df, genome)
+    ref_seqs, alt_seqs = io_utils.get_variant_seqs(variants_loc, genome_loc)
     # Load model
     model = chrombpnet_utils.load_chrombpnet(model_loc)
     # Make predictions
@@ -42,38 +40,10 @@ def score_variants(
     peaks_dist = np.load(peaks_dist_loc)
     scores = _scores_from_preds(ref_pred_logcts, alt_pred_logcts, peaks_dist)
     # Save
+    variant_df = io_utils.load_variants(variants_loc)
     for score_name, score_vals in scores.items():
         variant_df[score_name] = score_vals
     variant_df.to_csv(save_loc, sep="\t", index=False)
-
-
-def _load_variants(variants_loc: str) -> pd.DataFrame:
-    """Load a variants DataFrame."""
-    VARIANT_SCHEMA = ["chr", "pos", "ref", "alt"]
-    variants_df = pd.read_csv(variants_loc, sep="\t", names=VARIANT_SCHEMA)
-    return variants_df
-
-
-def _get_variant_seqs(variants_df, genome, width=2114):
-    """Get one-hot encoded peak sequences from a DataFrame of peaks."""
-    ref_sequences = []
-    alt_sequences = []
-    for _, row in regions.iterrows():
-        chro, pos, ref, alt = row["chro"], int(row["pos"]) - 1, row["ref"], row["alt"]
-        ref_seq = str(genome[chro][pos - width // 2 : pos + width // 2])
-        assert ref_seq[width // 2 : width // 2 + len(ref)] == ref
-        alt_seq = (
-            ref_seq[: width // 2]
-            + alt
-            + str(genome[chro][pos + len(ref) : pos + width // 2 + len(ref) - len(alt)])
-        )
-        assert len(alt_seq) == width
-        assert alt_seq[width // 2 : width // 2 + len(alt)] == alt
-        ref_sequences.append(ref_seq)
-        alt_sequences.append(alt_seq)
-    ref_onehot = chrombpnet_utils.dna_to_one_hot(ref_sequences)
-    alt_onehot = chrombpnet_utils.dna_to_one_hot(alt_sequences)
-    return ref_onehot, alt_onehot
 
 
 def _scores_from_preds(
@@ -104,7 +74,7 @@ def _compute_lfc_pval(ref_logcts, alt_logcts):
 # MAIN #
 ########
 def main(args):
-    # Call the ingest_model function with arguments
+    # Call the score_variants function with arguments
     args = _parse_args()
     score_variants(
         args.model_loc,
