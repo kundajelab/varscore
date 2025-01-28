@@ -5,6 +5,7 @@ import pandas as pd
 import shap
 import tensorflow as tf
 
+tf.compat.v1.disable_eager_execution()
 
 from tensorflow.keras.utils import get_custom_objects
 from tensorflow.keras.models import load_model
@@ -18,15 +19,15 @@ def load_chrombpnet(model_loc: str) -> tf.keras.Model:
     """Loads a ChromBPNet model."""
     custom_objects = {"multinomial_nll": _multinomial_nll, "tf": tf}
     get_custom_objects().update(custom_objects)
-    model = load_model(model_hdf5, compile=False)
+    model = load_model(model_loc, compile=False)
     return model
 
 
 def predict(
-    model: tf.keras.Model, seqs: np.ndarray, batch_size: int = 64
+    model: tf.keras.Model, seqs: np.ndarray, batch_size: int = 256
 ) -> tuple[np.ndarray, np.ndarray]:
     """Make predictions on sequences."""
-    tf.compat.v1.enable_eager_execution()
+    # tf.compat.v1.enable_eager_execution()
     pred_logits_batches, pred_logcts_batches = [], []
     for i in range(0, seqs.shape[0], batch_size):
         seq_batch = seqs[i : i + batch_size]
@@ -34,13 +35,13 @@ def predict(
         pred_logits_batches.append(pred_logits_i)
         pred_logcts_batches.append(pred_logcts_i)
     pred_logits = np.vstack(pred_logits_batches)
-    pred_logcts = np.vstack(pred_logcts_batches)
+    pred_logcts = np.vstack(pred_logcts_batches).flatten()
     return pred_logits, pred_logcts
 
 
-def deepshap(model: tf.keras.Model, seqs: np.ndarray) ->  np.ndarray, np.ndarray:
+def deepshap(model: tf.keras.Model, seqs: np.ndarray) ->  np.ndarray:
     """Compute counts DeepSHAPs on sequences."""
-    tf.compat.v1.disable_eager_execution()
+    # tf.compat.v1.disable_eager_execution()
     counts_explainer = shap.explainers.deep.TFDeepExplainer((model.input, tf.reduce_sum(model.outputs[1], axis=-1)), shuffle_several_times, combine_mult_and_diffref=combine_mult_and_diffref)
     counts_deepshaps = counts_explainer.shap_values(seqs, progress_message=100)
     observed_counts_deepshaps = (seqs*counts_deepshaps).astype(np.float16)

@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import binom
+import argparse
+import os
 
 import src.utils.chrombpnet_utils as chrombpnet_utils
 import src.utils.io_utils as io_utils
@@ -43,6 +45,7 @@ def score_variants(
     variant_df = io_utils.load_variants(variants_loc)
     for score_name, score_vals in scores.items():
         variant_df[score_name] = score_vals
+    os.makedirs(os.path.dirname(save_loc), exist_ok=True)
     variant_df.to_csv(save_loc, sep="\t", index=False)
 
 
@@ -56,8 +59,8 @@ def _scores_from_preds(
     # LFC p-Value
     scores_dict["lfc-pval"] = _compute_lfc_pval(ref_logcts, alt_logcts)
     # Active allele percentile
-    ref_quantiles = np.searchsorted(peaks_dist, ref_logcts) / len(ref_quantiles)
-    alt_quantiles = np.searchsorted(peaks_dist, alt_logcts) / len(alt_quantiles)
+    ref_quantiles = np.searchsorted(peaks_dist, ref_logcts) / len(peaks_dist)
+    alt_quantiles = np.searchsorted(peaks_dist, alt_logcts) / len(peaks_dist)
     scores_dict["active-allele-quantile"] = np.maximum(ref_quantiles, alt_quantiles)
     # Return
     return scores_dict
@@ -73,7 +76,7 @@ def _compute_lfc_pval(ref_logcts, alt_logcts):
 ########
 # MAIN #
 ########
-def main(args):
+def main():
     # Call the score_variants function with arguments
     args = _parse_args()
     score_variants(

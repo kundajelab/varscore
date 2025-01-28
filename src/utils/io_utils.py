@@ -44,8 +44,8 @@ def get_variant_seqs(variants_loc, genome_loc, width=2114):
     ref_sequences = []
     alt_sequences = []
     with pyfaidx.Fasta(genome_loc) as genome:
-        for _, row in regions.iterrows():
-            chro, pos, ref, alt = row["chro"], int(row["pos"]) - 1, row["ref"], row["alt"]
+        for _, row in variants_df.iterrows():
+            chro, pos, ref, alt = row["chr"], int(row["pos"]) - 1, row["ref"], row["alt"]
             ref_seq = str(genome[chro][pos - width // 2 : pos + width // 2])
             assert ref_seq[width // 2 : width // 2 + len(ref)] == ref
             alt_seq = (
@@ -65,7 +65,7 @@ def get_variant_seqs(variants_loc, genome_loc, width=2114):
 
 def load_variants(variants_loc: str) -> pd.DataFrame:
     """Load a variants DataFrame."""
-    VARIANT_SCHEMA = ["chr", "pos", "ref", "alt"]
+    VARIANT_SCHEMA = ["chr", "pos", "ref", "alt", "variant_id"]
     variants_df = pd.read_csv(variants_loc, sep="\t", names=VARIANT_SCHEMA)
     return variants_df
 
