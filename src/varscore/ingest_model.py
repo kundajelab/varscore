@@ -5,7 +5,7 @@ import pyfaidx
 import argparse
 import tensorflow as tf
 
-import src.varscore.chrombpnet_utils as chrombpnet_utils
+import src.utils.chrombpnet_utils as chrombpnet_utils
 
 
 ##################
@@ -89,8 +89,12 @@ def _get_peaks_distribution(
     N = len(peaks_df)
     if N < 1000:
         raise ValueError("The number of peaks must be greater than 1000.")
-    peak_seqs = _get_peak_seqs(peaks_df, genome_loc)
+    # Get sequences
+    with pyfaidx.Fasta(genome_loc) as genome:
+        peak_seqs = _get_peak_seqs(peaks_df, genome)
+    # Forward pass on sequences
     _, peak_logcts = chrombpnet_utils.predict(model, peak_seqs)
+    # Peak distribuion
     sorted_peak_logcts = np.sort(peak_logcts)
     peak_distribution = [sorted_peak_logcts[int(i * N / 1000)] for i in range(1000)]
     return peak_distribution
@@ -107,19 +111,18 @@ def _load_peaks(peaks_loc: str) -> pd.DataFrame:
     return peaks_df
 
 
-def _get_peak_seqs(peaks_df: pd.DataFrame, genome_loc: str, width=2114) -> np.ndarray:
+def _get_peak_seqs(peaks_df: pd.DataFrame, genome, width=2114) -> np.ndarray:
     """Get one-hot encoded peak sequences from a DataFrame of peaks."""
     sequences = []
-    with pyfaidx.Fasta(genome_loc) as genome:
-        for _, row in peaks_df.iterrows():
-            chro, window_start, window_end = (
-                row["chro"],
-                row["window_start"],
-                row["window_end"],
-            )
-            seq = str(genome[chro][window_start:window_end])
-            assert len(seq) == width
-            sequences.append(seq)
+    for _, row in peaks_df.iterrows():
+        chro, window_start, window_end = (
+            row["chro"],
+            row["window_start"],
+            row["window_end"],
+        )
+        seq = str(genome[chro][window_start:window_end])
+        assert len(seq) == width
+        sequences.append(seq)
     onehot = chrombpnet_utils.dna_to_one_hot(sequences)
     return onehot
 
@@ -127,8 +130,6 @@ def _get_peak_seqs(peaks_df: pd.DataFrame, genome_loc: str, width=2114) -> np.nd
 ########
 # MAIN #
 ########
-
-
 def _parse_args():
     parser = argparse.ArgumentParser(description="Ingest a model and associated data.")
     parser.add_argument(

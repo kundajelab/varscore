@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import binom
 
-import chrombpnet_utils
+import src.utils.chrombpnet_utils as chrombpnet_utils
 
 
 ##################

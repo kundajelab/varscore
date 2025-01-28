@@ -6,7 +6,7 @@ import pandas as pd
 from pydantic import BaseModel
 from typing import List, Tuple
 
-import src.varscore.region_utils as region_utils
+import src.utils.region_utils as region_utils
 
 
 class VariantAnnotationInput(BaseModel):
