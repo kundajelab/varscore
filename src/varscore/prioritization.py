@@ -42,14 +42,11 @@ def prioritize_variants(
     # Variant prioritization
     for m in models:
         variants_df[f"prioritized_{m}"] = (
-            (variants_df[f"logfc_pval_{m}"] <= 0.01)
+            (np.abs(variants_df[f"logfc_{m}"]) >= 0.25)
             & (variants_df[f"active_allele_quantile_{m}"] >= 0.05)
             & (
                 (variants_df["region_type"] == "promoter")
-                | (
-                    (variants_df[f"in_peak_{m}"] == True)
-                    & (variants_df[f"logfc_{m}"] < 0)
-                )
+                | (variants_df[f"in_peak_{m}"] == True)
                 | (
                     (variants_df[f"in_peak_{m}"] == False)
                     & (variants_df[f"logfc_{m}"] > 0)

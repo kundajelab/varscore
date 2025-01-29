@@ -70,6 +70,8 @@ def _scores_from_preds(
     ref_quantiles = np.searchsorted(peaks_dist, ref_logcts) / len(peaks_dist)
     alt_quantiles = np.searchsorted(peaks_dist, alt_logcts) / len(peaks_dist)
     scores_dict["active-allele-quantile"] = np.maximum(ref_quantiles, alt_quantiles)
+    # Integrative Prioritization Score
+    scores_dict["ips"] = scores_dict["lfc"]*scores_dict["jsd"]*scores_dict["active-allele-quantile"]
     # Return
     return scores_dict
 
