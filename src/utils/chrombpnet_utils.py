@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import shap
 import tensorflow as tf
+
 tf.compat.v1.disable_eager_execution()
 from tensorflow.keras.models import load_model
 from tensorflow.keras.utils import get_custom_objects
@@ -31,15 +32,19 @@ def predict(
         pred_logits_batches.append(pred_logits_i)
         pred_logcts_batches.append(pred_logcts_i)
     pred_logits = np.vstack(pred_logits_batches)
-    pred_logcts = np.vstack(pred_logcts_batches).squeeze()
+    pred_logcts = np.vstack(pred_logcts_batches)
     return pred_logits, pred_logcts
 
 
-def deepshap(model: tf.keras.Model, seqs: np.ndarray) ->  np.ndarray:
+def deepshap(model: tf.keras.Model, seqs: np.ndarray) -> np.ndarray:
     """Compute counts DeepSHAPs on sequences."""
-    counts_explainer = shap.explainers.deep.TFDeepExplainer((model.input, tf.reduce_sum(model.outputs[1], axis=-1)), shuffle_several_times, combine_mult_and_diffref=combine_mult_and_diffref)
+    counts_explainer = shap.explainers.deep.TFDeepExplainer(
+        (model.input, tf.reduce_sum(model.outputs[1], axis=-1)),
+        shuffle_several_times,
+        combine_mult_and_diffref=combine_mult_and_diffref,
+    )
     counts_deepshaps = counts_explainer.shap_values(seqs, progress_message=100)
-    observed_counts_deepshaps = (seqs*counts_deepshaps).astype(np.float16)
+    observed_counts_deepshaps = (seqs * counts_deepshaps).astype(np.float16)
     return observed_counts_deepshaps
 
 

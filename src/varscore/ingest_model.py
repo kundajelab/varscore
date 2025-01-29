@@ -64,6 +64,7 @@ def ingest_model(
     # TODO: Save peak DNATree
     return True
 
+
 def _ingest_fold(model_loc: str, peak_seqs: np.ndarray) -> Union[np.ndarray, None]:
     """Initial processing of a single fold of a model.
 
@@ -86,9 +87,7 @@ def _ingest_fold(model_loc: str, peak_seqs: np.ndarray) -> Union[np.ndarray, Non
     return peaks_dist
 
 
-def _get_peaks_distribution(
-    model: tf.keras.Model, peak_seqs: np.ndarray
-) -> np.ndarray:
+def _get_peaks_distribution(model: tf.keras.Model, peak_seqs: np.ndarray) -> np.ndarray:
     """Computes a 1000-dimensional distribution of peak logcounts from a model."""
     N = peak_seqs.shape[0]
     if N < 1000:
@@ -96,8 +95,8 @@ def _get_peaks_distribution(
     # Forward pass on sequences
     _, peak_logcts = chrombpnet_utils.predict(model, peak_seqs)
     # Peak distribuion
-    sorted_peak_logcts = np.sort(peak_logcts)
-    peak_distribution = [sorted_peak_logcts[int(i * N  / 1000)] for i in range(1000)]
+    sorted_peak_logcts = np.sort(peak_logcts.squeeze())
+    peak_distribution = [sorted_peak_logcts[int(i * N / 1000)] for i in range(1000)]
     return peak_distribution
 
 
@@ -122,6 +121,7 @@ def _parse_args():
     )
     return parser.parse_args()
 
+
 def main():
     # Call the ingest_model function with arguments
     args = _parse_args()
@@ -138,10 +138,11 @@ def main():
     if not success:
         raise RuntimeError("Model ingestion failed.")
 
+
 if __name__ == "__main__":
     main()
-    
-    
-'''
+
+
+"""
 uv run python -m src.varscore.ingest_model --peaks_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/preprocessing/downloads/peaks.bed.gz --genome_loc /oak/stanford/groups/akundaje/soumyak/refs/hg38/GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta --fold_0_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15/chrombpnet_wo_bias.h5 --fold_1_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_1/chrombpnet_wo_bias.h5 --fold_2_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_2/chrombpnet_wo_bias.h5 --fold_3_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_3/chrombpnet_wo_bias.h5 --fold_4_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_4/chrombpnet_wo_bias.h5 --output_dir ~/varscore_test/
-'''
+"""
