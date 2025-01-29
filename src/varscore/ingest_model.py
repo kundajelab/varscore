@@ -1,7 +1,5 @@
 from typing import Union
 import numpy as np
-import pandas as pd
-import pyfaidx
 import argparse
 import tensorflow as tf
 import os
@@ -46,7 +44,7 @@ def ingest_model(
     folds_ingested_successfully = True
     peak_dists = []
     for i in range(5):
-        peak_dist_fold_i = _ingest_fold(model_folds[i], peak_seqs)
+        peak_dist_fold_i = __ingest_fold(model_folds[i], peak_seqs)
         if peak_dist_fold_i is None:
             folds_ingested_successfully = False
             break
@@ -57,15 +55,12 @@ def ingest_model(
         return False
     for i in range(5):
         os.makedirs(output_dir, exist_ok=True)
-        np.save(
-            os.path.join(output_dir, f"fold_{i}.npy"),
-            peak_dists[i],
-        )
+        filename = "fold_{i}_peak_distribution.npy".format(i=i)
+        np.save(os.path.join(output_dir, filename), peak_dists[i])
     # TODO: Save peak DNATree
     return True
 
-
-def _ingest_fold(model_loc: str, peak_seqs: np.ndarray) -> Union[np.ndarray, None]:
+def __ingest_fold(model_loc: str, peak_seqs: np.ndarray) -> Union[np.ndarray, None]:
     """Initial processing of a single fold of a model.
 
     Checks that the model is valid. Then, produces the peak distribution.
@@ -83,11 +78,11 @@ def _ingest_fold(model_loc: str, peak_seqs: np.ndarray) -> Union[np.ndarray, Non
         return None
     # TODO: Hash model
     # Get peak distribution
-    peaks_dist = _get_peaks_distribution(model, peak_seqs)
+    peaks_dist = __get_peaks_distribution(model, peak_seqs)
     return peaks_dist
 
 
-def _get_peaks_distribution(model: tf.keras.Model, peak_seqs: np.ndarray) -> np.ndarray:
+def __get_peaks_distribution(model: tf.keras.Model, peak_seqs: np.ndarray) -> np.ndarray:
     """Computes a 1000-dimensional distribution of peak logcounts from a model."""
     N = peak_seqs.shape[0]
     if N < 1000:

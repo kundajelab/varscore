@@ -1,10 +1,14 @@
 # USAGE:
 # docker build -t varscore-dev -f Dockerfile.lib .
 # docker run --rm $IMAGE_ID src.varscore.ingest_model
+#
+# We use `uv` as a build tool only in dev. Here, to keep
+# the image size small, we install the dependencies 
+# directly from pip.
 # ------------------------------------------------
 
 # Use the official Python image as the base
-FROM python:3.9
+FROM kundajelab/chrombpnet:latest
 
 RUN apt update \
     && apt install -y --no-install-recommends \
@@ -14,26 +18,16 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
-RUN useradd --no-create-home --gid root runner
-
-ENV UV_PYTHON_PREFERENCE=only-system
-ENV UV_NO_CACHE=true
-
 # Set the working directory
 WORKDIR /code
 
 # Copy the requirements files
 COPY pyproject.toml .
-COPY uv.lock .
 
 # Install dependencies
-RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-RUN uv sync --all-extras --frozen --no-install-project
+RUN pip install .
 
 # Copy the application files
 COPY . .
 
-ENTRYPOINT [ "uv", "run", "python", "-m" ] 
+ENTRYPOINT [ "python", "-m" ] 

@@ -9,7 +9,7 @@ authors = [
 version = "0.0.1a"
 requires-python = ">= 3.8, < 3.10"
 dependencies = [
-	"deeplift>=0.6.13.0",
+	"deeplift==0.6.13.0",
 	"fastapi>=0.103.2",
 	"intervaltree>=3.1.0",
 	"logomaker",
@@ -20,9 +20,10 @@ dependencies = [
 	"pybedtools==0.10.0",
 	"pyfaidx==0.6.1",
 	"kundajelab-shap==1",
+	"scipy==1.10.1",
 	# "tangermeme>=0.4.0",
-	"tensorflow==2.8.0",
-	"tensorflow-probability==0.15.0",
+	"tensorflow==2.8.1",
+	"tensorflow-probability==0.14.0",
 	# "tf-keras>=2.15.0",
 	"uvicorn>=0.33.0",
 ]

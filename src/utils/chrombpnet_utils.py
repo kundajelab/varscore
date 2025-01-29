@@ -1,6 +1,8 @@
 from deeplift.dinuc_shuffle import dinuc_shuffle
 import numpy as np
 import pandas as pd
+from typing import Tuple
+
 import shap
 import tensorflow as tf
 
@@ -23,7 +25,7 @@ def load_chrombpnet(model_loc: str) -> tf.keras.Model:
 
 def predict(
     model: tf.keras.Model, seqs: np.ndarray, batch_size: int = 256
-) -> tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """Make predictions on sequences."""
     pred_logits_batches, pred_logcts_batches = [], []
     for i in range(0, seqs.shape[0], batch_size):

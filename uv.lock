@@ -772,8 +772,7 @@ dependencies = [
     { name = "scikit-image", version = "0.24.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "scikit-learn", version = "1.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "scikit-learn", version = "1.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "scipy", version = "1.10.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "scipy" },
     { name = "tqdm" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1e/f0/31299fb38f501089463b8c5f9c8e029944dee4c63ed526fd828fd2b162ab/kundajelab-shap-1.tar.gz", hash = "sha256:0269759677ae8a71544e34168c680588703c2e983a20ff8bce93cd73dc6004ff", size = 234587 }
@@ -811,6 +810,22 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/2d/c2/de1db8c6d413597076a4259cea409b83459b2db997c003578affdd32bf66/libclang-18.1.1-py2.py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:69f8eb8f65c279e765ffd28aaa7e9e364c776c17618af8bff22a8df58677ff4f", size = 24921494 },
     { url = "https://files.pythonhosted.org/packages/0b/2d/3f480b1e1d31eb3d6de5e3ef641954e5c67430d5ac93b7fa7e07589576c7/libclang-18.1.1-py2.py3-none-win_amd64.whl", hash = "sha256:4dd2d3b82fab35e2bf9ca717d7b63ac990a3519c7e312f19fa8e86dcc712f7fb", size = 26415083 },
     { url = "https://files.pythonhosted.org/packages/71/cf/e01dc4cc79779cd82d77888a88ae2fa424d93b445ad4f6c02bfc18335b70/libclang-18.1.1-py2.py3-none-win_arm64.whl", hash = "sha256:3f0e1f49f04d3cd198985fea0511576b0aee16f9ff0e0f0cad7f9c57ec3c20e8", size = 22361112 },
+]
+
+[[package]]
+name = "logomaker"
+version = "0.8.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib", version = "3.7.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "numpy" },
+    { name = "pandas", version = "2.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "pandas", version = "2.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/24/79/747d3df617ef4a008647a04adbfcdc34127faa4dba1da3a7e52236a10c7a/logomaker-0.8.3.tar.gz", hash = "sha256:7c92397f8fedb2ce95479213384664bead6b3e6d0b1d0a4602a9a2745aefcebe", size = 12523602 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/39/533ba83c59eb3137acdd187c88eae8fd56b63b62ea0e0e2311e524378d3f/logomaker-0.8.3-py2.py3-none-any.whl", hash = "sha256:9020e2753e89a5712998e80928019b0c3748d0570a492739ed70928033c4b20b", size = 12548934 },
 ]
 
 [[package]]
@@ -1527,7 +1542,7 @@ dependencies = [
     { name = "packaging", marker = "python_full_version < '3.9'" },
     { name = "pillow", version = "10.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "pywavelets", marker = "python_full_version < '3.9'" },
-    { name = "scipy", version = "1.10.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "scipy", marker = "python_full_version < '3.9'" },
     { name = "tifffile", version = "2023.7.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1d/c2/a54d5e6e2d6708e0722a1aaccef4b7cc1e6df6f76c8b4ce98cd6d0c332c3/scikit_image-0.21.0.tar.gz", hash = "sha256:b33e823c54e6f11873ea390ee49ef832b82b9f70752c8759efd09d5a4e3d87f0", size = 22720419 }
@@ -1558,7 +1573,7 @@ dependencies = [
     { name = "numpy", marker = "python_full_version >= '3.9'" },
     { name = "packaging", marker = "python_full_version >= '3.9'" },
     { name = "pillow", version = "11.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "scipy", marker = "python_full_version >= '3.9'" },
     { name = "tifffile", version = "2024.8.30", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5d/c5/bcd66bf5aae5587d3b4b69c74bee30889c46c9778e858942ce93a030e1f3/scikit_image-0.24.0.tar.gz", hash = "sha256:5d16efe95da8edbeb363e0c4157b99becbd650a60b77f6e3af5768b66cf007ab", size = 22693928 }
@@ -1580,7 +1595,7 @@ resolution-markers = [
 dependencies = [
     { name = "joblib", marker = "python_full_version < '3.9'" },
     { name = "numpy", marker = "python_full_version < '3.9'" },
-    { name = "scipy", version = "1.10.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "scipy", marker = "python_full_version < '3.9'" },
     { name = "threadpoolctl", marker = "python_full_version < '3.9'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/88/00/835e3d280fdd7784e76bdef91dd9487582d7951a7254f59fc8004fc8b213/scikit-learn-1.3.2.tar.gz", hash = "sha256:a2f54c76accc15a34bfb9066e6c7a56c1e7235dda5762b990792330b52ccfb05", size = 7510251 }
@@ -1607,7 +1622,7 @@ resolution-markers = [
 dependencies = [
     { name = "joblib", marker = "python_full_version >= '3.9'" },
     { name = "numpy", marker = "python_full_version >= '3.9'" },
-    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "scipy", marker = "python_full_version >= '3.9'" },
     { name = "threadpoolctl", marker = "python_full_version >= '3.9'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9e/a5/4ae3b3a0755f7b35a280ac90b28817d1f380318973cff14075ab41ef50d9/scikit_learn-1.6.1.tar.gz", hash = "sha256:b4fc2525eca2c69a59260f583c56a7557c6ccdf8deafdba6e060f94c1c59738e", size = 7068312 }
@@ -1623,11 +1638,8 @@ wheels = [
 name = "scipy"
 version = "1.10.1"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version < '3.9'",
-]
 dependencies = [
-    { name = "numpy", marker = "python_full_version < '3.9'" },
+    { name = "numpy" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/84/a9/2bf119f3f9cff1f376f924e39cfae18dec92a1514784046d185731301281/scipy-1.10.1.tar.gz", hash = "sha256:2cf9dfb80a7b4589ba4c40ce7588986d6d5cebc5457cad2c2880f6bc2d42f3a5", size = 42407997 }
 wheels = [
@@ -1641,26 +1653,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/77/d1/722c457b319eed1d642e0a14c9be37eb475f0e6ed1f3401fa480d5d6d36e/scipy-1.10.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:51af417a000d2dbe1ec6c372dfe688e041a7084da4fdd350aeb139bd3fb55353", size = 30960654 },
     { url = "https://files.pythonhosted.org/packages/5d/30/b2a2a5bf1a3beefb7609fb871dcc6aef7217c69cef19a4631b7ab5622a8a/scipy-1.10.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1b4735d6c28aad3cdcf52117e0e91d6b39acd4272f3f5cd9907c24ee931ad601", size = 34458863 },
     { url = "https://files.pythonhosted.org/packages/35/20/0ec6246bbb43d18650c9a7cad6602e1a84fd8f9564a9b84cc5faf1e037d0/scipy-1.10.1-cp39-cp39-win_amd64.whl", hash = "sha256:7ff7f37b1bf4417baca958d254e8e2875d0cc23aaadbe65b3d5b3077b0eb23ea", size = 42509516 },
-]
-
-[[package]]
-name = "scipy"
-version = "1.13.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.9'",
-]
-dependencies = [
-    { name = "numpy", marker = "python_full_version >= '3.9'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ae/00/48c2f661e2816ccf2ecd77982f6605b2950afe60f60a52b4cbbc2504aa8f/scipy-1.13.1.tar.gz", hash = "sha256:095a87a0312b08dfd6a6155cbbd310a8c51800fc931b8c0b84003014b874ed3c", size = 57210720 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/29/c2ea58c9731b9ecb30b6738113a95d147e83922986b34c685b8f6eefde21/scipy-1.13.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:436bbb42a94a8aeef855d755ce5a465479c721e9d684de76bf61a62e7c2b81d5", size = 39352927 },
-    { url = "https://files.pythonhosted.org/packages/5c/c0/e71b94b20ccf9effb38d7147c0064c08c622309fd487b1b677771a97d18c/scipy-1.13.1-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:8335549ebbca860c52bf3d02f80784e91a004b71b059e3eea9678ba994796a24", size = 30324538 },
-    { url = "https://files.pythonhosted.org/packages/6d/0f/aaa55b06d474817cea311e7b10aab2ea1fd5d43bc6a2861ccc9caec9f418/scipy-1.13.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d533654b7d221a6a97304ab63c41c96473ff04459e404b83275b60aa8f4b7004", size = 33732190 },
-    { url = "https://files.pythonhosted.org/packages/35/f5/d0ad1a96f80962ba65e2ce1de6a1e59edecd1f0a7b55990ed208848012e0/scipy-1.13.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:637e98dcf185ba7f8e663e122ebf908c4702420477ae52a04f9908707456ba4d", size = 38612244 },
-    { url = "https://files.pythonhosted.org/packages/8d/02/1165905f14962174e6569076bcc3315809ae1291ed14de6448cc151eedfd/scipy-1.13.1-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:a014c2b3697bde71724244f63de2476925596c24285c7a637364761f8710891c", size = 38845637 },
-    { url = "https://files.pythonhosted.org/packages/3e/77/dab54fe647a08ee4253963bcd8f9cf17509c8ca64d6335141422fe2e2114/scipy-1.13.1-cp39-cp39-win_amd64.whl", hash = "sha256:392e4ec766654852c25ebad4f64e4e584cf19820b980bc04960bca0b0cd6eaa2", size = 46227440 },
 ]
 
 [[package]]
@@ -1805,7 +1797,7 @@ wheels = [
 
 [[package]]
 name = "tensorflow"
-version = "2.8.0"
+version = "2.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "absl-py" },
@@ -1826,20 +1818,28 @@ dependencies = [
     { name = "setuptools", version = "75.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "six" },
     { name = "tensorboard" },
+    { name = "tensorflow-estimator" },
     { name = "tensorflow-io-gcs-filesystem" },
     { name = "termcolor", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "termcolor", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "tf-estimator-nightly" },
     { name = "typing-extensions" },
     { name = "wrapt" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/6b/a4b872afe267184051a716aae58f1f9d8ebb456ecce7edece70a07c15f56/tensorflow-2.8.0-cp38-cp38-macosx_10_14_x86_64.whl", hash = "sha256:dd0f9f113ebc21b73fcd349db1629e187b8686395b8146d100eb1706a943bbc0", size = 217436882 },
-    { url = "https://files.pythonhosted.org/packages/2f/45/f5c91d69c2121e8e60673164bdcd2c6cda7b89e37decbc3c01b0466ca990/tensorflow-2.8.0-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:8489b4f1771e146f752b0eaeb57acf183bd07357e4550464e7dff18b3b656b5d", size = 497623578 },
-    { url = "https://files.pythonhosted.org/packages/17/5b/dac6e0607e4186b9e157597cd96d945aa769c60ef9f9f1b7ddc174f39332/tensorflow-2.8.0-cp38-cp38-win_amd64.whl", hash = "sha256:da38d4043185267e7316ae5dc98d18e89c8af4170859f64798e7a3607fd606e3", size = 437951022 },
-    { url = "https://files.pythonhosted.org/packages/80/26/2990ee24ea5ef5ece557828ce295abc75e5b6c0c8ebf571a842f6e1125db/tensorflow-2.8.0-cp39-cp39-macosx_10_14_x86_64.whl", hash = "sha256:52f225fecc688281b3ae2cba2b52d3ed6215ed4a3ffb686b9cfd09885ca65563", size = 217460667 },
-    { url = "https://files.pythonhosted.org/packages/b9/39/88799b7257f73482d4c77bc18c068902a91629c6d380db88cc28ede44fd5/tensorflow-2.8.0-cp39-cp39-manylinux2010_x86_64.whl", hash = "sha256:9d91a989e5455ae713c03fd7236071ab3f232ad8ff2831f2658072933546091f", size = 497647203 },
-    { url = "https://files.pythonhosted.org/packages/dd/0b/6fd33732d436a6735094b6e44359e13c10901e71aeaf348ff7c9e4ee08c9/tensorflow-2.8.0-cp39-cp39-win_amd64.whl", hash = "sha256:b360c13b3e58b9a5c0780cbdb6b549eea73f620275fa203f8508fe418ae02735", size = 437983714 },
+    { url = "https://files.pythonhosted.org/packages/6f/d0/0ed85a7ea3cb8456490a96aafe53dab54f67b93625bf41213efb3d72736c/tensorflow-2.8.1-cp38-cp38-macosx_10_14_x86_64.whl", hash = "sha256:9b9801ff8803a26ce2eab6962dae679b81106400ba4c07c30514262050fb4e7d", size = 217800872 },
+    { url = "https://files.pythonhosted.org/packages/03/86/d1fbbeceda94af01c94d849cedf1336bc4b56f80adbcd2b6cbcba7ccdc1c/tensorflow-2.8.1-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:e3e29c2529586ac293e3d79964be4973b3fc28ebf2694b347e2e54c869b4d354", size = 497979855 },
+    { url = "https://files.pythonhosted.org/packages/c9/ec/b92d979f83097c3a09cc9608e8df9b45a903115d43eeaef078c3b938a672/tensorflow-2.8.1-cp38-cp38-win_amd64.whl", hash = "sha256:c2b8fbd3a7eb2461799ba28b29dca64ef236b275860270c4e5ea1ef987cdb735", size = 438275991 },
+    { url = "https://files.pythonhosted.org/packages/9f/f6/8a239b8beee1da7f6c5d14cdcd3030edb27bde1ca8af93d8d633cd198648/tensorflow-2.8.1-cp39-cp39-macosx_10_14_x86_64.whl", hash = "sha256:b27e8a8f5bdb45ce3fa25fb238e243ac58cc999c82bb64efea5a4d6054ece020", size = 217824600 },
+    { url = "https://files.pythonhosted.org/packages/77/d3/326ea2174e0c96be58faffdd8fae151487fcfbcf0ef1ac1d19529d616b19/tensorflow-2.8.1-cp39-cp39-manylinux2010_x86_64.whl", hash = "sha256:6c03aab03a91ea7d4ba3b5ebd163bac7b04b879d6ede873383f557cea890d98d", size = 498000114 },
+    { url = "https://files.pythonhosted.org/packages/07/f1/4e45a2adf43734c23534808923b3ecd099ed8949042ced549a3bfe7a1ad6/tensorflow-2.8.1-cp39-cp39-win_amd64.whl", hash = "sha256:9c3dcd8c1388d140a129ec77a99413ed2952dc5aca9a9f3621410cb2e1ca9bf6", size = 438315261 },
+]
+
+[[package]]
+name = "tensorflow-estimator"
+version = "2.8.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4e/42/cefc351e0e428ca9c460bfbd994ec9f01e5d8bd34f88c65a7ea807ecd67a/tensorflow_estimator-2.8.0-py2.py3-none-any.whl", hash = "sha256:bee8e0520c60ae7eaf6ca8cb46c5a9f4b45725531380db8fbe38fcb48478b6bb", size = 462335 },
 ]
 
 [[package]]
@@ -1855,7 +1855,7 @@ wheels = [
 
 [[package]]
 name = "tensorflow-probability"
-version = "0.15.0"
+version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "absl-py" },
@@ -1867,7 +1867,7 @@ dependencies = [
     { name = "six" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/33/567d23338cf00fff5fbb84b25b19df6cf1f7147cc9cb38d40baae002790e/tensorflow_probability-0.15.0-py2.py3-none-any.whl", hash = "sha256:a5c6d1116fa619fa3fcfe076ff81adc276989fb58da179e464c1fd25d824530a", size = 5741291 },
+    { url = "https://files.pythonhosted.org/packages/14/0d/78bdd8ec49db60686e1118e4ab8f5336e54aa158216e75fee9c18e22da61/tensorflow_probability-0.14.0-py2.py3-none-any.whl", hash = "sha256:c9602ebe2744fb4b479c9e12cd10cbdbec9776c6e4daa5257c55d76c1edaec4c", size = 5655092 },
 ]
 
 [[package]]
@@ -1892,14 +1892,6 @@ resolution-markers = [
 sdist = { url = "https://files.pythonhosted.org/packages/37/72/88311445fd44c455c7d553e61f95412cf89054308a1aa2434ab835075fc5/termcolor-2.5.0.tar.gz", hash = "sha256:998d8d27da6d48442e8e1f016119076b690d962507531df4890fcd2db2ef8a6f", size = 13057 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7f/be/df630c387a0a054815d60be6a97eb4e8f17385d5d6fe660e1c02750062b4/termcolor-2.5.0-py3-none-any.whl", hash = "sha256:37b17b5fc1e604945c2642c872a3764b5d547a48009871aea3edd3afa180afb8", size = 7755 },
-]
-
-[[package]]
-name = "tf-estimator-nightly"
-version = "2.8.0.dev2021122109"
-source = { registry = "https://pypi.org/simple" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a7/f1/f89e097f377b163856076f167baf149b010df3bbf425d2c06276048e2051/tf_estimator_nightly-2.8.0.dev2021122109-py2.py3-none-any.whl", hash = "sha256:0065a04e396b2890bd19761fc1de7559ceafeba12839f8db2c7e7473afaaf612", size = 462481 },
 ]
 
 [[package]]
@@ -2056,6 +2048,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "intervaltree" },
     { name = "kundajelab-shap" },
+    { name = "logomaker" },
     { name = "numpy" },
     { name = "pandas", version = "2.0.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "pandas", version = "2.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
@@ -2063,6 +2056,7 @@ dependencies = [
     { name = "protobuf" },
     { name = "pybedtools" },
     { name = "pyfaidx" },
+    { name = "scipy" },
     { name = "tensorflow" },
     { name = "tensorflow-probability" },
     { name = "uvicorn", version = "0.33.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
@@ -2076,10 +2070,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "deeplift", specifier = ">=0.6.13.0" },
+    { name = "deeplift", specifier = "==0.6.13.0" },
     { name = "fastapi", specifier = ">=0.103.2" },
     { name = "intervaltree", specifier = ">=3.1.0" },
     { name = "kundajelab-shap", specifier = "==1" },
+    { name = "logomaker" },
     { name = "numpy", specifier = "==1.23.4" },
     { name = "pandas", specifier = ">=1.3.4" },
     { name = "polars", specifier = "==1.8.2" },
@@ -2087,8 +2082,9 @@ requires-dist = [
     { name = "pybedtools", specifier = "==0.10.0" },
     { name = "pyfaidx", specifier = "==0.6.1" },
     { name = "pytest", marker = "extra == 'dev'" },
-    { name = "tensorflow", specifier = "==2.8.0" },
-    { name = "tensorflow-probability", specifier = "==0.15.0" },
+    { name = "scipy", specifier = "==1.10.1" },
+    { name = "tensorflow", specifier = "==2.8.1" },
+    { name = "tensorflow-probability", specifier = "==0.14.0" },
     { name = "uvicorn", specifier = ">=0.33.0" },
 ]
 
