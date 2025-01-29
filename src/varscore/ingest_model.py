@@ -39,12 +39,14 @@ def ingest_model(
         output_dir: The directory in which peak distributions are
           saved.
     """
+    # Load peaks
+    peak_seqs = io_utils.get_peak_seqs(peaks_loc, genome_loc)
     # Ingest each fold
     model_folds = [fold_0_loc, fold_1_loc, fold_2_loc, fold_3_loc, fold_4_loc]
     folds_ingested_successfully = True
     peak_dists = []
     for i in range(5):
-        peak_dist_fold_i = _ingest_fold(model_folds[i], peaks_loc, genome_loc)
+        peak_dist_fold_i = _ingest_fold(model_folds[i], peak_seqs)
         if peak_dist_fold_i is None:
             folds_ingested_successfully = False
             break
@@ -62,7 +64,7 @@ def ingest_model(
     # TODO: Save peak DNATree
     return True
 
-def _ingest_fold(model_loc: str, peaks_loc: str, genome_loc: str) -> Union[np.ndarray, None]:
+def _ingest_fold(model_loc: str, peak_seqs: np.ndarray) -> Union[np.ndarray, None]:
     """Initial processing of a single fold of a model.
 
     Checks that the model is valid. Then, produces the peak distribution.
@@ -80,15 +82,14 @@ def _ingest_fold(model_loc: str, peaks_loc: str, genome_loc: str) -> Union[np.nd
         return None
     # TODO: Hash model
     # Get peak distribution
-    peaks_dist = _get_peaks_distribution(model, peaks_loc, genome_loc)
+    peaks_dist = _get_peaks_distribution(model, peak_seqs)
     return peaks_dist
 
 
 def _get_peaks_distribution(
-    model: tf.keras.Model, peaks_loc: str, genome_loc: str
+    model: tf.keras.Model, peak_seqs: np.ndarray
 ) -> np.ndarray:
     """Computes a 1000-dimensional distribution of peak logcounts from a model."""
-    peak_seqs = io_utils.get_peak_seqs(peaks_loc, genome_loc)
     N = peak_seqs.shape[0]
     if N < 1000:
         raise ValueError("The number of peaks must be greater than 1000.")
