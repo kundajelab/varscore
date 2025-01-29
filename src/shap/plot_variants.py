@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+import os
+
 import src.utils.io_utils as io_utils
 
 
@@ -13,19 +15,16 @@ import src.utils.io_utils as io_utils
 #################
 def plot_variants(
 	variants_loc: str,
-	ref_counts_profile_save_loc: str,
-	ref_shap_save_loc: str,
-	alt_counts_profile_save_loc: str,
-	alt_shap_save_loc: str,
+    plotting_data_dir: str,
 	save_loc: str,
 	num_cpus: int = 4
 ) -> None:
 	"""Plot variants."""
     variants_df = io_utils.load_variants(variants_loc)
-	ref_counts_profile = np.load(ref_counts_profile_save_loc)
-	ref_shaps = np.load(ref_shap_save_loc)
-	alt_counts_profile = np.load(alt_counts_profile_save_loc)
-	alt_shaps = np.load(alt_shap_save_loc)
+	ref_counts_profile = np.load(os.path.join(plotting_data_dir, "average_ref_profiles.npy"))
+    ref_shaps = np.load(os.path.join(plotting_data_dir, "average_ref_shaps.npy"))
+    alt_counts_profile = np.load(os.path.join(plotting_data_dir, "average_alt_profiles.npy"))
+    alt_shaps = np.load(os.path.join(plotting_data_dir, "average_alt_shaps.npy"))
 	# Prepare plotting
 	payloads = []
 	for index, row in variants_df.iterrows():

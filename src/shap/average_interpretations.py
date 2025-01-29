@@ -9,54 +9,22 @@ import src.utils.math_utils as math_utils
 # CORE FUNCTIONS #
 ##################
 def average_interpretations(
-	fold_0_ref_logcts_loc: str,
-	fold_0_ref_logits_loc: str,
-	fold_0_ref_shaps_loc: str,
-	fold_0_alt_logcts_loc: str,
-	fold_0_alt_logits_loc: str,
-	fold_0_alt_shaps_loc: str,
-
-	fold_1_ref_logcts_loc: str,
-	fold_1_ref_logits_loc: str,
-	fold_1_ref_shaps_loc: str,
-	fold_1_alt_logcts_loc: str,
-	fold_1_alt_logits_loc: str,
-	fold_1_alt_shaps_loc: str,
-
-	fold_2_ref_logcts_loc: str,
-	fold_2_ref_logits_loc: str,
-	fold_2_ref_shaps_loc: str,
-	fold_2_alt_logcts_loc: str,
-	fold_2_alt_logits_loc: str,
-	fold_2_alt_shaps_loc: str,
-
-	fold_3_ref_logcts_loc: str,
-	fold_3_ref_logits_loc: str,
-	fold_3_ref_shaps_loc: str,
-	fold_3_alt_logcts_loc: str,
-	fold_3_alt_logits_loc: str,
-	fold_3_alt_shaps_loc: str,
-
-	fold_4_ref_logcts_loc: str,
-	fold_4_ref_logits_loc: str,
-	fold_4_ref_shaps_loc: str,
-	fold_4_alt_logcts_loc: str,
-	fold_4_alt_logits_loc: str,
-	fold_4_alt_shaps_loc: str,
-
-	ref_counts_profile_save_loc: str,
-	ref_shap_save_loc: str,
-	alt_counts_profile_save_loc: str,
-	alt_shap_save_loc: str
+	fold_0_dir: str,
+	fold_1_dir: str,
+	fold_2_dir: str,
+	fold_3_dir: str,
+	fold_4_dir: str,
+	save_dir: str
 ) -> None:
 	"""Compute average count-scaled profiles and shaps for ref and alt variants.
 	"""
-	ref_logcts_locs = [fold_0_ref_logcts_loc, fold_1_ref_logcts_loc, fold_2_ref_logcts_loc, fold_3_ref_logcts_loc, fold_4_ref_logcts_loc]
-	ref_logits_locs = [fold_0_ref_logits_loc, fold_1_ref_logits_loc, fold_2_ref_logits_loc, fold_3_ref_logits_loc, fold_4_ref_logits_loc]
-	ref_shaps_locs = [fold_0_ref_shaps_loc, fold_1_ref_shaps_loc, fold_2_ref_shaps_loc, fold_3_ref_shaps_loc, fold_4_ref_shaps_loc]
-	alt_logcts_locs = [fold_0_alt_logcts_loc, fold_1_alt_logcts_loc, fold_2_alt_logcts_loc, fold_3_alt_logcts_loc, fold_4_alt_logcts_loc]
-	alt_logits_locs = [fold_0_alt_logits_loc, fold_1_alt_logits_loc, fold_2_alt_logits_loc, fold_3_alt_logits_loc, fold_4_alt_logits_loc]
-	alt_shaps_locs = [fold_0_alt_shaps_loc, fold_1_alt_shaps_loc, fold_2_alt_shaps_loc, fold_3_alt_shaps_loc, fold_4_alt_shaps_loc]
+	fold_dirs = [fold_0_dir, fold_1_dir, fold_2_dir, fold_3_dir, fold_4_dir]
+	ref_logcts_locs = [os.path.join(fd, "ref_logcts.npy") for fd in fold_dirs]
+	ref_logits_locs = [os.path.join(fd, "ref_logits.npy") for fd in fold_dirs]
+	ref_shaps_locs = [os.path.join(fd, "ref_shaps.npy") for fd in fold_dirs]
+	alt_logcts_locs = [os.path.join(fd, "alt_logcts.npy") for fd in fold_dirs]
+	alt_logits_locs = [os.path.join(fd, "alt_logits.npy") for fd in fold_dirs]
+	alt_shaps_locs = [os.path.join(fd, "alt_shaps.npy") for fd in fold_dirs]
 	# Load data
 	ref_logcts = [np.load(x) for x in ref_logcts_locs]
 	ref_logits = [np.load(x) for x in ref_logits_locs]
@@ -79,10 +47,11 @@ def average_interpretations(
 	alt_profile = exp_alt_logits/np.sum(exp_alt_logits, axis=1, keepdims=True)
 	alt_counts_profile = np.exp(alt_avg_logcts)*alt_profile
 	# Save
-	np.save(ref_counts_profile_save_loc, ref_counts_profile)
-	np.save(ref_shap_save_loc, ref_avg_shaps)
-	np.save(alt_counts_profile_save_loc, alt_counts_profile)
-	np.save(alt_shap_save_loc, alt_avg_shaps)
+	os.makedirs(save_dir, exist_ok=True)
+	np.save(os.path.join(save_dir, "average_ref_profiles.npy"), ref_counts_profile)
+	np.save(os.path.join(save_dir, "average_ref_shaps.npy"), ref_avg_shaps)
+	np.save(os.path.join(save_dir, "average_alt_profiles.npy"), alt_counts_profile)
+	np.save(os.path.join(save_dir, "average_alt_shaps.npy"), alt_avg_shaps)
 
 
 ########
@@ -92,66 +61,23 @@ def main(args):
     # Call the average_interpretation function with arguments
     args = _parse_args()
     average_interpretations(
-        args.fold_0_ref_logcts_loc,
-        args.fold_0_ref_logits_loc,
-        args.fold_0_ref_shaps_loc,
-        args.fold_0_alt_logcts_loc,
-        args.fold_0_alt_logits_loc,
-        args.fold_0_alt_shaps_loc,
-
-        args.fold_1_ref_logcts_loc,
-        args.fold_1_ref_logits_loc,
-        args.fold_1_ref_shaps_loc,
-        args.fold_1_alt_logcts_loc,
-        args.fold_1_alt_logits_loc,
-        args.fold_1_alt_shaps_loc,
-
-        args.fold_2_ref_logcts_loc,
-        args.fold_2_ref_logits_loc,
-        args.fold_2_ref_shaps_loc,
-        args.fold_2_alt_logcts_loc,
-        args.fold_2_alt_logits_loc,
-        args.fold_2_alt_shaps_loc,
-
-        args.fold_3_ref_logcts_loc,
-        args.fold_3_ref_logits_loc,
-        args.fold_3_ref_shaps_loc,
-        args.fold_3_alt_logcts_loc,
-        args.fold_3_alt_logits_loc,
-        args.fold_3_alt_shaps_loc,
-
-        args.fold_4_ref_logcts_loc,
-        args.fold_4_ref_logits_loc,
-        args.fold_4_ref_shaps_loc,
-        args.fold_4_alt_logcts_loc,
-        args.fold_4_alt_logits_loc,
-        args.fold_4_alt_shaps_loc,
-
-        args.ref_counts_profile_save_loc,
-        args.ref_shap_save_loc,
-        args.alt_counts_profile_save_loc,
-        args.alt_shap_save_loc
+        args.fold_0_dir,
+        args.fold_1_dir,
+        args.fold_2_dir,
+        args.fold_3_dir,
+        args.fold_4_dir,
+        args.save_dir
     )
 
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="Average interpretations across multiple folds and save the results.")
-    
-    # Add arguments for all the input locations (folds 0-4, ref/alt files)
-    for i in range(5):
-        parser.add_argument(f"--fold_{i}_ref_logcts_loc", required=True, help=f"Fold {i} reference log counts location.")
-        parser.add_argument(f"--fold_{i}_ref_logits_loc", required=True, help=f"Fold {i} reference logits location.")
-        parser.add_argument(f"--fold_{i}_ref_shaps_loc", required=True, help=f"Fold {i} reference SHAPs location.")
-        parser.add_argument(f"--fold_{i}_alt_logcts_loc", required=True, help=f"Fold {i} alternate log counts location.")
-        parser.add_argument(f"--fold_{i}_alt_logits_loc", required=True, help=f"Fold {i} alternate logits location.")
-        parser.add_argument(f"--fold_{i}_alt_shaps_loc", required=True, help=f"Fold {i} alternate SHAPs location.")
-
-    # Add arguments for the output locations
-    parser.add_argument("--ref_counts_profile_save_loc", required=True, help="Location to save the reference counts profile.")
-    parser.add_argument("--ref_shap_save_loc", required=True, help="Location to save the reference SHAP values.")
-    parser.add_argument("--alt_counts_profile_save_loc", required=True, help="Location to save the alternate counts profile.")
-    parser.add_argument("--alt_shap_save_loc", required=True, help="Location to save the alternate SHAP values.")
-    
+    parser.add_argument("--fold_0_dir", required=True, help=f"The directory where fold 0 interpretations are.")
+    parser.add_argument("--fold_1_dir", required=True, help=f"The directory where fold 1 interpretations are.")
+    parser.add_argument("--fold_2_dir", required=True, help=f"The directory where fold 2 interpretations are.")
+    parser.add_argument("--fold_3_dir", required=True, help=f"The directory where fold 3 interpretations are.")
+    parser.add_argument("--fold_4_dir", required=True, help=f"The directory where fold 4 interpretations are.")
+    parser.add_argument("--save_dir", required=True, help=f"The directory to save averaged interpretations to.")
     return parser.parse_args()
 
 
