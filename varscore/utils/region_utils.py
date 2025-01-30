@@ -18,6 +18,25 @@ def loadDNATree(save_loc):
 
 
 class DNATree:
+    """An object for storing and looking up genetic regions.
+
+    A DNATree object is built on top of an interval tree and is intended to
+      maintain a collection of genetic regions and serve as an interface by
+      which one can efficiently compute overlaps of those regions. The object
+      can be loaded and saved using loadDNATree() and DNATree.save(). Regions
+      can be added using the DNATree.add() function and specifying the
+      chromosome of the region and the start and end locations of the region.
+      Similarly, regions can be looked up using the DNATree.overlap() function
+      using the same arguments.
+
+      IMPORTANT: Regions are assumed to be endpoint inclusive as: [start, end].
+        If you want a region to represent a single position for instance, the
+        region should be specified as [pos, pos].
+
+    Attributes:
+        chro_trees: A dictionary of interval trees mapping a chromosome name to
+          the interval tree representing regions on that chromosome.
+    """
     def __init__(self):
         self.chro_trees = dict()
 
@@ -72,14 +91,14 @@ def region_type(chro, start, end):
 ################
 # NEAREST GENE #
 ################
-def _load_genes_by_chro():
+def __load_genes_by_chro():
     gene_df = pd.read_csv(GENE_DF_LOC, sep="\t")
     gene_df = gene_df[gene_df["gene_type"] == "protein_coding"]
     return {chro: gene_df[gene_df["chro"] == chro] for chro in set(gene_df["chro"])}
 
 
 GENE_DF_LOC = os.path.join(os.path.dirname(__file__), "..", "data", "gene_df.tsv")
-GENES_BY_CHRO = _load_genes_by_chro()
+GENES_BY_CHRO = __load_genes_by_chro()
 
 
 def nearest_genes(chro, pos, num_genes=3):

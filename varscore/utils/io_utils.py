@@ -1,23 +1,20 @@
+import numpy as np
 import pandas as pd
 import pyfaidx
+
+from typing import Tuple
 
 import varscore.utils.chrombpnet_utils as chrombpnet_utils
 
 
-def get_peak_seqs(peaks_loc, genome_loc, width=2114):
+def get_peak_seqs(peaks_df: pd.DataFrame, genome_loc: str, width: int = 2114) -> np.ndarray:
     """Get one-hot encoded peak sequences from peaks."""
-    # Load peaks DataFrame
-    peaks_df = load_peaks(peaks_loc)
-    flank_size = width // 2
-    peaks_df["summit_pos"] = peaks_df["start"] + peaks_df["summit"]
-    peaks_df["window_start"] = peaks_df["summit_pos"] - flank_size
-    peaks_df["window_end"] = peaks_df["summit_pos"] + flank_size
     # Load sequences
     sequences = []
     with pyfaidx.Fasta(genome_loc) as genome:
         for _, row in peaks_df.iterrows():
             chro, window_start, window_end = (
-                row["chro"],
+                row["chr"],
                 row["window_start"],
                 row["window_end"],
             )
@@ -29,17 +26,19 @@ def get_peak_seqs(peaks_loc, genome_loc, width=2114):
     return onehot
 
 
-def load_peaks(peaks_loc: str) -> pd.DataFrame:
+NARROWPEAK_SCHEMA = ["chr", "start", "end", "4", "5", "6", "7", "8", "9", "summit"]
+def load_peaks(peaks_loc: str, width: int = 2114) -> pd.DataFrame:
     """Load a peaks DataFrame, add window start/stop columns."""
-    NARROWPEAK_SCHEMA = ["chro", "start", "end", "4", "5", "6", "7", "8", "9", "summit"]
     peaks_df = pd.read_csv(peaks_loc, sep="\t", names=NARROWPEAK_SCHEMA)
+    flank_size = width // 2
+    peaks_df["summit_pos"] = peaks_df["start"] + peaks_df["summit"]
+    peaks_df["window_start"] = peaks_df["summit_pos"] - flank_size
+    peaks_df["window_end"] = peaks_df["summit_pos"] + flank_size
     return peaks_df
 
 
-def get_variant_seqs(variants_loc, genome_loc, width=2114):
+def get_variant_seqs(variants_df: pd.DataFrame, genome_loc: str, width: int = 2114) -> Tuple[np.ndarray, np.ndarray]:
     """Get one-hot encoded ref/alot sequences from variants."""
-    # Load variants DataFrame
-    variants_df = load_variants(variants_loc)
     # Load sequences
     ref_sequences = []
     alt_sequences = []
@@ -72,8 +71,8 @@ def get_variant_seqs(variants_loc, genome_loc, width=2114):
     return ref_onehot, alt_onehot
 
 
+VARIANT_SCHEMA = ["chr", "pos", "ref", "alt", "variant_id"]
 def load_variants(variants_loc: str) -> pd.DataFrame:
     """Load a variants DataFrame."""
-    VARIANT_SCHEMA = ["chr", "pos", "ref", "alt", "variant_id"]
     variants_df = pd.read_csv(variants_loc, sep="\t", names=VARIANT_SCHEMA)
     return variants_df

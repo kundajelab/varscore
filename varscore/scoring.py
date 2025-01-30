@@ -34,7 +34,8 @@ def score_variants(
         out_path: The path to save the scores dataframe.
     """
     # Get reference and alternate sequences
-    ref_seqs, alt_seqs = io_utils.get_variant_seqs(variants_loc, genome_loc)
+    variant_df = io_utils.load_variants(variants_loc)
+    ref_seqs, alt_seqs = io_utils.get_variant_seqs(variant_df, genome_loc)
     # Load model
     model = chrombpnet_utils.load_chrombpnet(model_loc)
     # Make predictions
@@ -47,7 +48,6 @@ def score_variants(
     #     ref_pred_logcts, ref_pred_logits, alt_pred_logcts, alt_pred_logits, peaks_dist
     # )
     # Save
-    variant_df = io_utils.load_variants(variants_loc)
     # for score_name, score_vals in scores.items():
     #     variant_df[score_name] = score_vals
     variant_df["lfc"] = _compute_lfc(ref_pred_logcts, alt_pred_logcts)

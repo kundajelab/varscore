@@ -28,7 +28,8 @@ def interpret(
         save_dir: The directory to save all outputs to.
     """
     # Get reference and alternate sequences
-    ref_seqs, alt_seqs = io_utils.get_variant_seqs(variants_loc, genome_loc)
+    variant_df = io_utils.load_variants(variants_loc)
+    ref_seqs, alt_seqs = io_utils.get_variant_seqs(variant_df, genome_loc)
     # Load model
     model = chrombpnet_utils.load_chrombpnet(model_loc)
     # Make predictions

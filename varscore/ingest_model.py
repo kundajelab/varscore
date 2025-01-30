@@ -6,6 +6,7 @@ import os
 
 import varscore.utils.chrombpnet_utils as chrombpnet_utils
 import varscore.utils.io_utils as io_utils
+import varscore.utils.region_utils as region_utils
 
 
 ##################
@@ -38,7 +39,8 @@ def ingest_model(
           saved.
     """
     # Load peaks
-    peak_seqs = io_utils.get_peak_seqs(peaks_loc, genome_loc)
+    peaks_df = io_utils.load_peaks(peaks_loc)
+    peak_seqs = io_utils.get_peak_seqs(peaks_df, genome_loc)
     # Ingest each fold
     model_folds = [fold_0_loc, fold_1_loc, fold_2_loc, fold_3_loc, fold_4_loc]
     folds_ingested_successfully = True
@@ -58,6 +60,12 @@ def ingest_model(
         filename = "fold_{i}_peak_distribution.npy".format(i=i)
         np.save(os.path.join(output_dir, filename), peak_dists[i])
     # TODO: Save peak DNATree
+    # Save DNATree
+    peaks_dnatree = region_utils.DNATree()
+    for _, row in peak_seqs.iterrows():
+        peaks_dnatree.add(row["chr"], row["window_start"], row["window_end"])
+    filename = "peaks.dnatree".format(i=i)
+    peaks_dnatree.save(os.path.join(output_dir, filename))
     return True
 
 def __ingest_fold(model_loc: str, peak_seqs: np.ndarray) -> Union[np.ndarray, None]:
