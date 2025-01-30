@@ -18,7 +18,7 @@ def score_variants(
     variants_loc: str,
     genome_loc: str,
     peaks_dist_loc: str,
-    save_loc: str,
+    out_path: str,
 ) -> None:
     """Score variants through a model.
 
@@ -31,7 +31,7 @@ def score_variants(
         variants_loc: The path of variants tsv.
         genome_loc: The path to the model's genome fasta.
         peaks_dist_loc: The path to the model's peak distribution.
-        save_loc: The path to save the scores dataframe.
+        out_path: The path to save the scores dataframe.
     """
     # Get reference and alternate sequences
     ref_seqs, alt_seqs = io_utils.get_variant_seqs(variants_loc, genome_loc)
@@ -49,8 +49,8 @@ def score_variants(
     variant_df = io_utils.load_variants(variants_loc)
     for score_name, score_vals in scores.items():
         variant_df[score_name] = score_vals
-    os.makedirs(os.path.dirname(save_loc), exist_ok=True)
-    variant_df.to_csv(save_loc, sep="\t", index=False)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    variant_df.to_csv(out_path, sep="\t", index=False)
 
 
 def _scores_from_preds(
@@ -104,7 +104,7 @@ def main():
         args.variants_loc,
         args.genome_loc,
         args.peaks_dist_loc,
-        args.save_loc,
+        args.out_path,
     )
 
 
@@ -113,21 +113,21 @@ def _parse_args():
         description="Score variants using a trained model and associated data."
     )
     parser.add_argument(
-        "--model_loc", required=True, help="Location of the model file."
+        "-m", "--model_loc", required=True, help="Location of the model file."
     )
     parser.add_argument(
-        "--variants_loc", required=True, help="Location of the variants file."
+        "-v", "--variants_loc", required=True, help="Location of the variants file."
     )
     parser.add_argument(
-        "--genome_loc", required=True, help="Location of the genome file."
+        "-g", "--genome_loc", required=True, help="Location of the genome file."
     )
     parser.add_argument(
-        "--peaks_dist_loc",
+        "-p", "--peaks_dist_loc",
         required=True,
         help="Location of the peaks distribution file.",
     )
     parser.add_argument(
-        "--save_loc", required=True, help="Location to save the results."
+        "-o", "--out_path", required=True, help="Location to save the results."
     )
     return parser.parse_args()
 
