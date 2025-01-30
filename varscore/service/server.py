@@ -4,8 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import uvicorn
 import pandas as pd
-from src.varscore.prioritization import prioritize_variants
-from src.varscore.annotations import VariantAnnotationInput, AnnotatedVariant, annotate_variant
+from varscore.prioritization import prioritize_variants
+from varscore.annotations import VariantAnnotationInput, AnnotatedVariant, annotate_variant
 
 ALLOWED_ORIGINS = [
     "http://localhost:5173",

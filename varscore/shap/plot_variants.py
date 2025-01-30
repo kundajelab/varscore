@@ -11,7 +11,7 @@ import io
 import multiprocessing
 import os
 
-import src.utils.io_utils as io_utils
+import varscore.utils.io_utils as io_utils
 
 
 #################

@@ -1,7 +1,7 @@
 import pandas as pd
 import pyfaidx
 
-import src.utils.chrombpnet_utils as chrombpnet_utils
+import varscore.utils.chrombpnet_utils as chrombpnet_utils
 
 
 def get_peak_seqs(peaks_loc, genome_loc, width=2114):

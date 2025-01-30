@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from typing import List, Tuple
 
-import src.utils.region_utils as region_utils
+import varscore.utils.region_utils as region_utils
 
 # import polars as pl
 # import pybedtools

@@ -2068,6 +2068,11 @@ dev = [
     { name = "pytest" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "deeplift", specifier = "==0.6.13.0" },
@@ -2087,6 +2092,9 @@ requires-dist = [
     { name = "tensorflow-probability", specifier = "==0.14.0" },
     { name = "uvicorn", specifier = ">=0.33.0" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.3.4" }]
 
 [[package]]
 name = "wcwidth"

@@ -5,8 +5,8 @@ from scipy.stats import binom
 import argparse
 import os
 
-import src.utils.chrombpnet_utils as chrombpnet_utils
-import src.utils.io_utils as io_utils
+import varscore.utils.chrombpnet_utils as chrombpnet_utils
+import varscore.utils.io_utils as io_utils
 
 
 ##################
