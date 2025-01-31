@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial.distance import jensenshannon
 from scipy.stats import binom
+from scipy.special import softmax
 
 import argparse
 import os
@@ -13,6 +14,8 @@ import varscore.utils.io_utils as io_utils
 ##################
 # CORE FUNCTIONS #
 ##################
+
+
 def score_variants(
     model_loc: str,
     variants_loc: str,
@@ -36,68 +39,31 @@ def score_variants(
     # Get reference and alternate sequences
     variant_df = io_utils.load_variants(variants_loc)
     ref_seqs, alt_seqs = io_utils.get_variant_seqs(variant_df, genome_loc)
+
     # Load model
     model = chrombpnet_utils.load_chrombpnet(model_loc)
+    
+    # Load peak distribution
+    peaks_dist = np.load(peaks_dist_loc)
+    
     # Make predictions
     ref_pred_logits, ref_pred_logcts = chrombpnet_utils.predict(model, ref_seqs)
     alt_pred_logits, alt_pred_logcts = chrombpnet_utils.predict(model, alt_seqs)
     
-    # Compute scores
-    peaks_dist = np.load(peaks_dist_loc)
-    # scores = _scores_from_preds(
-    #     ref_pred_logcts, ref_pred_logits, alt_pred_logcts, alt_pred_logits, peaks_dist
-    # )
+    # Score variants
+    _score_variant_df(variant_df, ref_pred_logits, alt_pred_logits, ref_pred_logcts, alt_pred_logcts, peaks_dist)
+    
     # Save
-    # for score_name, score_vals in scores.items():
-    #     variant_df[score_name] = score_vals
-    variant_df["lfc"] = _compute_lfc(ref_pred_logcts, alt_pred_logcts)
-    variant_df["lfc-pval"] = _compute_lfc_pval(ref_pred_logcts, alt_pred_logcts)
-    variant_df["jsd"] = _compute_jsd(ref_pred_logits, alt_pred_logits)
-    variant_df["active-allele-quantile"] = _compute_active_allele_quantile( ref_pred_logcts, alt_pred_logcts, peaks_dist)
-    variant_df["ips"] = _compute_ips(variant_df["lfc"], variant_df["jsd"], variant_df["active-allele-quantile"])
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     variant_df.to_csv(out_path, sep="\t", index=False)
-
-
-# def _scores_from_preds(
-#     ref_logcts: np.ndarray,
-#     ref_logits: np.ndarray,
-#     alt_logcts: np.ndarray,
-#     alt_logits: np.ndarray,
-#     peaks_dist: np.ndarray,
-# ) -> dict[str, np.ndarray]:
-#     """Compute scores based on logcount predictions.
     
-#     Args:
-#         ref_logcts: Reference logcounts. Shape: (N,).
-#         ref_logits: Reference logits. Shape: (N, 4).
-#         alt_logcts: Alternate logcounts. Shape: (N,).
-#         alt_logits: Alternate logits. Shape: (N, 4).
-#         peaks_dist: Peak distribution. Shape: (1000,).
-#     """
-#     scores_dict = dict()
-#     # Log2 Fold Change
-#     scores_dict["lfc"] = (alt_logcts - ref_logcts) / np.exp(2)
-#     # LFC p-Value
-#     scores_dict["lfc-pval"] = _compute_lfc_pval(ref_logcts, alt_logcts)
-#     # JSD
-#     ref_exp_logits = np.exp(ref_logits)
-#     ref_profile = ref_exp_logits / np.sum(ref_exp_logits, axis=1, keepdims=True)
-#     alt_exp_logits = np.exp(alt_logits)
-#     alt_profile = alt_exp_logits / np.sum(alt_exp_logits, axis=1, keepdims=True)
-#     scores_dict["jsd"] = np.squeeze(
-#         [jensenshannon(x, y, base=2.0) for x, y in zip(ref_profile, alt_profile)]
-#     )
-#     # Active allele quantile
-#     ref_quantiles = np.searchsorted(peaks_dist, ref_logcts) / len(peaks_dist)
-#     alt_quantiles = np.searchsorted(peaks_dist, alt_logcts) / len(peaks_dist)
-#     scores_dict["active-allele-quantile"] = np.maximum(ref_quantiles, alt_quantiles)
-#     # Integrative Prioritization Score
-#     scores_dict["ips"] = (
-#         scores_dict["lfc"] * scores_dict["jsd"] * scores_dict["active-allele-quantile"]
-#     )
-#     # Return
-#     return scores_dict
+def _score_variant_df(variant_df, ref_pred_logits, alt_pred_logits, ref_pred_logcts, alt_pred_logcts, peaks_dist):
+    variant_df["lfc"] = _compute_lfc(ref_pred_logcts, alt_pred_logcts)
+    variant_df["lfc_pval"] = _compute_lfc_pval(ref_pred_logcts, alt_pred_logcts)
+    variant_df["jsd"] = _compute_jsd(ref_pred_logits, alt_pred_logits)
+    variant_df["active_allele_quantile"] = _compute_active_allele_quantile( ref_pred_logcts, alt_pred_logcts, peaks_dist)
+    variant_df["ips"] = _compute_ips(variant_df["lfc"], variant_df["jsd"], variant_df["active_allele_quantile"])
+    return variant_df
 
 def _compute_lfc(ref_logcts, alt_logcts):
     """Computes LFC.
@@ -126,10 +92,8 @@ def _compute_jsd(ref_logits, alt_logits):
         ref_logits: Reference allele logits. Shape: (N, 1000).
         alt_logits: Alternate allele logits. Shape: (N, 1000).
     """
-    ref_exp_logits = np.exp(ref_logits)
-    ref_profile = ref_exp_logits / np.sum(ref_exp_logits, axis=1, keepdims=True)
-    alt_exp_logits = np.exp(alt_logits)
-    alt_profile = alt_exp_logits / np.sum(alt_exp_logits, axis=1, keepdims=True)
+    ref_profile = softmax(ref_logits, axis=1)
+    alt_profile = softmax(alt_logits, axis=1)
     return np.squeeze(
         [jensenshannon(x, y, base=2.0) for x, y in zip(ref_profile, alt_profile)]
     )
