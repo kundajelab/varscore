@@ -46,7 +46,7 @@ def ingest_model(
     folds_ingested_successfully = True
     peak_dists = []
     for i in range(5):
-        peak_dist_fold_i = __ingest_fold(model_folds[i], peak_seqs)
+        peak_dist_fold_i = _ingest_fold(model_folds[i], peak_seqs)
         if peak_dist_fold_i is None:
             folds_ingested_successfully = False
             break
@@ -62,13 +62,13 @@ def ingest_model(
     # TODO: Save peak DNATree
     # Save DNATree
     peaks_dnatree = region_utils.DNATree()
-    for _, row in peak_seqs.iterrows():
+    for _, row in peaks_df.iterrows():
         peaks_dnatree.add(row["chr"], row["window_start"], row["window_end"])
     filename = "peaks.dnatree".format(i=i)
     peaks_dnatree.save(os.path.join(output_dir, filename))
     return True
 
-def __ingest_fold(model_loc: str, peak_seqs: np.ndarray) -> Union[np.ndarray, None]:
+def _ingest_fold(model_loc: str, peak_seqs: np.ndarray) -> Union[np.ndarray, None]:
     """Initial processing of a single fold of a model.
 
     Checks that the model is valid. Then, produces the peak distribution.
@@ -86,11 +86,11 @@ def __ingest_fold(model_loc: str, peak_seqs: np.ndarray) -> Union[np.ndarray, No
         return None
     # TODO: Hash model
     # Get peak distribution
-    peaks_dist = __get_peaks_distribution(model, peak_seqs)
+    peaks_dist = _get_peaks_distribution(model, peak_seqs)
     return peaks_dist
 
 
-def __get_peaks_distribution(model: tf.keras.Model, peak_seqs: np.ndarray) -> np.ndarray:
+def _get_peaks_distribution(model: tf.keras.Model, peak_seqs: np.ndarray) -> np.ndarray:
     """Computes a 1000-dimensional distribution of peak logcounts from a model."""
     N = peak_seqs.shape[0]
     if N < 1000:
@@ -109,18 +109,18 @@ def __get_peaks_distribution(model: tf.keras.Model, peak_seqs: np.ndarray) -> np
 def _parse_args():
     parser = argparse.ArgumentParser(description="Ingest a model and associated data.")
     parser.add_argument(
-        "--peaks_loc", required=True, help="Location of the peaks file."
+        "-p", "--peaks_loc", required=True, help="Location of the peaks file."
     )
     parser.add_argument(
-        "--genome_loc", required=True, help="Location of the genome file."
+        "-g", "--genome_loc", required=True, help="Location of the genome file."
     )
-    parser.add_argument("--fold_0_loc", required=True, help="Location of fold 0 file.")
-    parser.add_argument("--fold_1_loc", required=True, help="Location of fold 1 file.")
-    parser.add_argument("--fold_2_loc", required=True, help="Location of fold 2 file.")
-    parser.add_argument("--fold_3_loc", required=True, help="Location of fold 3 file.")
-    parser.add_argument("--fold_4_loc", required=True, help="Location of fold 4 file.")
+    parser.add_argument("-f0", "--fold_0_loc", required=True, help="Location of fold 0 file.")
+    parser.add_argument("-f1", "--fold_1_loc", required=True, help="Location of fold 1 file.")
+    parser.add_argument("-f2", "--fold_2_loc", required=True, help="Location of fold 2 file.")
+    parser.add_argument("-f3", "--fold_3_loc", required=True, help="Location of fold 3 file.")
+    parser.add_argument("-f4", "--fold_4_loc", required=True, help="Location of fold 4 file.")
     parser.add_argument(
-        "--output_dir", required=True, help="Directory to save peaks distribution data."
+        "-o", "--output_dir", required=True, help="Directory to save peaks distribution data."
     )
     return parser.parse_args()
 
@@ -147,5 +147,5 @@ if __name__ == "__main__":
 
 
 """
-uv run python -m src.varscore.ingest_model --peaks_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/preprocessing/downloads/peaks.bed.gz --genome_loc /oak/stanford/groups/akundaje/soumyak/refs/hg38/GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta --fold_0_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15/chrombpnet_wo_bias.h5 --fold_1_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_1/chrombpnet_wo_bias.h5 --fold_2_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_2/chrombpnet_wo_bias.h5 --fold_3_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_3/chrombpnet_wo_bias.h5 --fold_4_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_4/chrombpnet_wo_bias.h5 --output_dir ~/varscore_test/
+CUDA_VISIBLE_DEVICES=2 && uv run python -m varscore.ingest_model --peaks_loc /users/riyasinh/data/test.2k.bed --genome_loc /oak/stanford/groups/akundaje/soumyak/refs/hg38/GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta --fold_0_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15/chrombpnet_wo_bias.h5 --fold_1_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_1/chrombpnet_wo_bias.h5 --fold_2_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_2/chrombpnet_wo_bias.h5 --fold_3_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_3/chrombpnet_wo_bias.h5 --fold_4_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_4/chrombpnet_wo_bias.h5 --output_dir ~/varscore_test/
 """
