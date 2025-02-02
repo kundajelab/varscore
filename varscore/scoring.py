@@ -59,7 +59,8 @@ def score_variants(
     
 def _score_variant_df(variant_df, ref_pred_logits, alt_pred_logits, ref_pred_logcts, alt_pred_logcts, peaks_dist):
     variant_df["lfc"] = _compute_lfc(ref_pred_logcts, alt_pred_logcts)
-    variant_df["lfc_pval"] = _compute_lfc_pval(ref_pred_logcts, alt_pred_logcts)
+    # TODO: test this more before enabling; gives NaNs somewhat often?
+    # variant_df["lfc_pval"] = _compute_lfc_pval(ref_pred_logcts, alt_pred_logcts)
     variant_df["jsd"] = _compute_jsd(ref_pred_logits, alt_pred_logits)
     variant_df["active_allele_quantile"] = _compute_active_allele_quantile( ref_pred_logcts, alt_pred_logcts, peaks_dist)
     variant_df["ips"] = _compute_ips(variant_df["lfc"], variant_df["jsd"], variant_df["active_allele_quantile"])

@@ -21,7 +21,7 @@ docker build -t kundajelab/varscore:dev -f Dockerfile.lib .
 Sanity check to make sure it works (PLEASE DO BEFORE PUSHING):
 
 ```bash
-docker run --rm kundajelab/varscore:dev src.varscore.ingest_model
+docker run --rm kundajelab/varscore:dev varscore.ingest_model
 ``` 
 
 Push:
