@@ -21,7 +21,7 @@ def variant_score_db_reformat(variant_score_db: pd.DataFrame) -> pd.DataFrame:
     pivoted_df = variant_score_db.pivot(
         index=non_pivot_columns,
         columns="model_id",
-        values=["logfc", "logfc_pval", "active_allele_quantile", "in_peak"],
+        values=["logfc", "active_allele_quantile", "in_peak"],
     )
     pivoted_df.columns = [f"{col[0]}_{col[1]}" for col in pivoted_df.columns]
     pivoted_df = pivoted_df.reset_index()
