@@ -13,7 +13,7 @@ import varscore.utils.io_utils as io_utils
 # CORE FUNCTIONS #
 ##################
 def interpret(
-    model_loc: str, variants_loc: str, genome_loc: str, save_dir: str
+    model_loc: str, variants_loc: str, genome_loc: str, output_dir: str
 ) -> None:
     """Score variants through a model.
 
@@ -39,45 +39,41 @@ def interpret(
     ref_shaps = chrombpnet_utils.deepshap(model, ref_seqs)
     alt_shaps = chrombpnet_utils.deepshap(model, alt_seqs)
     # Save
-    os.makedirs(save_dir, exist_ok=True)
-    np.save(os.path.join(save_dir, "ref_logcts.npy"), ref_logcts)
-    np.save(os.path.join(save_dir, "ref_logits.npy"), ref_logits)
-    np.save(os.path.join(save_dir, "ref_shaps.npy"), ref_shaps)
-    np.save(os.path.join(save_dir, "alt_logcts.npy"), alt_logcts)
-    np.save(os.path.join(save_dir, "alt_logits.npy"), alt_logits)
-    np.save(os.path.join(save_dir, "alt_shaps.npy"), alt_shaps)
+    os.makedirs(output_dir, exist_ok=True)
+    np.save(os.path.join(output_dir, "ref_logcts.npy"), ref_logcts)
+    np.save(os.path.join(output_dir, "ref_logits.npy"), ref_logits)
+    np.save(os.path.join(output_dir, "ref_shaps.npy"), ref_shaps)
+    np.save(os.path.join(output_dir, "alt_logcts.npy"), alt_logcts)
+    np.save(os.path.join(output_dir, "alt_logits.npy"), alt_logits)
+    np.save(os.path.join(output_dir, "alt_shaps.npy"), alt_shaps)
 
 
 ########
 # MAIN #
 ########
-def main():
-    # Call the interpret function with arguments
-    args = _parse_args()
-    interpret(args.model_loc, args.variants_loc, args.genome_loc, args.save_dir)
-
 
 def _parse_args():
     parser = argparse.ArgumentParser(
         description="Interpret variants using a trained model and save the results."
     )
     parser.add_argument(
-        "--model_loc", required=True, help="Location of the model file."
+        "-m", "--model_loc", required=True, help="Location of the model file."
     )
     parser.add_argument(
-        "--variants_loc", required=True, help="Location of the variants file."
+        "-v", "--variants_loc", required=True, help="Location of the variants file."
     )
     parser.add_argument(
-        "--genome_loc", required=True, help="Location of the genome file."
+        "-g", "--genome_loc", required=True, help="Location of the genome file."
     )
     parser.add_argument(
-        "--save_dir", required=True, help="The directory to save all outputs to."
+        "-o", "--output_dir", required=True, help="The directory to save all outputs to."
     )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    main()
+    args = _parse_args()
+    interpret(args.model_loc, args.variants_loc, args.genome_loc, args.output_dir)
 
 """
 create a dummy ~/varscore_test/test_variants.tsv
