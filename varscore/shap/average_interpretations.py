@@ -44,12 +44,27 @@ def average_interpretations(
     alt_exp_logits = np.exp(alt_avg_logits)
     alt_profile = alt_exp_logits / np.sum(alt_exp_logits, axis=1, keepdims=True)
     alt_counts_profile = np.exp(alt_avg_logcts) * alt_profile
+    # Prepare FiNeMo inputs
+    ref_finemo_sequences = (ref_avg_shaps != 0).astype(np.int8).transpose(0, 2, 1) # Transpose so (N, L, 4) -> (N, 4, L)
+    ref_finemo_contribs = np.sum(ref_avg_shaps, axis=2).astype(np.float16) # (N, L, 4) -> (N, L)
+    alt_finemo_sequences = (alt_avg_shaps != 0).astype(np.int8).transpose(0, 2, 1) # Transpose so (N, L, 4) -> (N, 4, L)
+    alt_finemo_contribs = np.sum(alt_avg_shaps, axis=2).astype(np.float16) # (N, L, 4) -> (N, L)
     # Save
     os.makedirs(out_dir, exist_ok=True)
     np.save(os.path.join(out_dir, "average_ref_profiles.npy"), ref_counts_profile)
     np.save(os.path.join(out_dir, "average_ref_shaps.npy"), ref_avg_shaps)
     np.save(os.path.join(out_dir, "average_alt_profiles.npy"), alt_counts_profile)
     np.save(os.path.join(out_dir, "average_alt_shaps.npy"), alt_avg_shaps)
+    np.savez(
+        os.path.join(out_dir, "ref_finemo_input.npz"),
+        sequences=ref_finemo_sequences,
+        contribs=ref_finemo_contribs,
+    )
+    np.savez(
+        os.path.join(out_dir, "alt_finemo_input.npz"),
+        sequences=alt_finemo_sequences,
+        contribs=alt_finemo_contribs,
+    )
 
 
 ########
@@ -109,5 +124,5 @@ if __name__ == "__main__":
     main()
 
 """
-uv run python -m src.shap.average_interpretations --fold_0_dir ~/varscore_test/fold_0_interpretations --fold_1_dir ~/varscore_test/fold_1_interpretations --fold_2_dir ~/varscore_test/fold_2_interpretations --fold_3_dir ~/varscore_test/fold_3_interpretations --fold_4_dir ~/varscore_test/fold_4_interpretations --out_dir ~/varscore_test/average_interpretations
+uv run python -m varscore.shap.average_interpretations --fold_0_dir ~/varscore_test/fold_0_interpretations --fold_1_dir ~/varscore_test/fold_1_interpretations --fold_2_dir ~/varscore_test/fold_2_interpretations --fold_3_dir ~/varscore_test/fold_3_interpretations --fold_4_dir ~/varscore_test/fold_4_interpretations --out_dir ~/varscore_test/average_interpretations
 """
