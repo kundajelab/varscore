@@ -1,5 +1,6 @@
 import logomaker
 import matplotlib as mpl
+import argparse
 
 mpl.use("Agg")
 import matplotlib.pyplot as plt
@@ -18,7 +19,7 @@ import varscore.utils.io_utils as io_utils
 # CORE FUNCTION #
 #################
 def plot_variants(
-    variants_loc: str, plotting_data_dir: str, save_loc: str, num_cpus: int = 4
+    variants_loc: str, plotting_data_dir: str, out_path: str, num_cpus: int = 4
 ) -> None:
     """Plot variants."""
     variants_df = io_utils.load_variants(variants_loc)
@@ -61,7 +62,7 @@ def plot_variants(
         plot_strings = p.starmap(_plot_variant_to_utf8, payloads)
     # Save
     variants_df["plot"] = plot_strings
-    variants_df.to_csv(save_loc, sep="\t", index=False)
+    variants_df.to_csv(out_path, sep="\t", index=False)
 
 
 def _plot_variant_and_save(
@@ -75,7 +76,7 @@ def _plot_variant_and_save(
     allele2_label,
     window_size,
     title,
-    save_loc,
+    out_path,
 ):
     fig = plot_variant(
         allele1_pred,
@@ -89,7 +90,7 @@ def _plot_variant_and_save(
         window_size,
         title,
     )
-    plt.savefig(save_loc, bbox_inches="tight")
+    plt.savefig(out_path, bbox_inches="tight")
     plt.close()
 
 
@@ -119,7 +120,7 @@ def _plot_variant_to_utf8(
     )
     # Encode image in UTF-8
     buf = io.BytesIO()
-    fig.savefig(buf, format="png")
+    fig.savefig(buf, format="svg")
     plt.close(fig)
     buf.seek(0)
     utf8_plot = base64.b64encode(buf.read()).decode("utf-8")
@@ -170,7 +171,7 @@ def plot_variant(
     plt.subplots_adjust(hspace=0.3, top=0.785)
     fig.set_facecolor("white")
     return fig
-    plt.savefig(save_loc, bbox_inches="tight")
+    plt.savefig(out_path, bbox_inches="tight")
     plt.close()
 
 
@@ -377,14 +378,45 @@ def _plotter_shap(
         color="black",
         bbox=dict(boxstyle="round", facecolor="white", edgecolor="lightgrey"),
     )
+    
+def parser():
+    parser = argparse.ArgumentParser(description="Plot variants.")
+    parser.add_argument(
+        "-v",
+        "--variants_loc",
+        required=True,
+        help="The path to the variants TSV file.",
+    )
+    parser.add_argument(
+        "-p",
+        "--plotting_data_dir",
+        required=True,
+        help="The directory where the average interpretation data is.",
+    )
+    parser.add_argument(
+        "-o",
+        "--out_path",
+        required=True,
+        help="The path to save the TSV with images.",
+    )
+    parser.add_argument(
+        "-n",
+        "--num_cpus",
+        default=4,
+        type=int,
+        help="The number of CPUs to use.",
+    )
+    return parser
 
 
 if __name__ == "__main__":
-    print("hi")
-    plot_variants(
-        "/users/salil512/varscore_test/test_variants.tsv",
-        "/users/salil512/varscore_test/average_interpretations",
-        "/users/salil512/varscore_test/tsv_with_imgs.tsv",
-        4,
-    )
-    print("done")
+    args = parser().parse_args()
+    plot_variants(args.variants_loc, args.plotting_data_dir, args.out_path, args.num_cpus)
+    # print("hi")
+    # plot_variants(
+    #     "/users/salil512/varscore_test/test_variants.tsv",
+    #     "/users/salil512/varscore_test/average_interpretations",
+    #     "/users/salil512/varscore_test/tsv_with_imgs.tsv",
+    #     4,
+    # )
+    # print("done")
