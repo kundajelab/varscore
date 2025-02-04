@@ -13,7 +13,7 @@ def average_interpretations(
     fold_2_dir: str,
     fold_3_dir: str,
     fold_4_dir: str,
-    save_dir: str,
+    out_dir: str,
 ) -> None:
     """Compute average count-scaled profiles and shaps for ref and alt variants."""
     fold_dirs = [fold_0_dir, fold_1_dir, fold_2_dir, fold_3_dir, fold_4_dir]
@@ -45,11 +45,11 @@ def average_interpretations(
     alt_profile = alt_exp_logits / np.sum(alt_exp_logits, axis=1, keepdims=True)
     alt_counts_profile = np.exp(alt_avg_logcts) * alt_profile
     # Save
-    os.makedirs(save_dir, exist_ok=True)
-    np.save(os.path.join(save_dir, "average_ref_profiles.npy"), ref_counts_profile)
-    np.save(os.path.join(save_dir, "average_ref_shaps.npy"), ref_avg_shaps)
-    np.save(os.path.join(save_dir, "average_alt_profiles.npy"), alt_counts_profile)
-    np.save(os.path.join(save_dir, "average_alt_shaps.npy"), alt_avg_shaps)
+    os.makedirs(out_dir, exist_ok=True)
+    np.save(os.path.join(out_dir, "average_ref_profiles.npy"), ref_counts_profile)
+    np.save(os.path.join(out_dir, "average_ref_shaps.npy"), ref_avg_shaps)
+    np.save(os.path.join(out_dir, "average_alt_profiles.npy"), alt_counts_profile)
+    np.save(os.path.join(out_dir, "average_alt_shaps.npy"), alt_avg_shaps)
 
 
 ########
@@ -64,7 +64,7 @@ def main():
         args.fold_2_dir,
         args.fold_3_dir,
         args.fold_4_dir,
-        args.save_dir,
+        args.out_dir,
     )
 
 
@@ -73,32 +73,32 @@ def _parse_args():
         description="Average interpretations across multiple folds and save the results."
     )
     parser.add_argument(
-        "--fold_0_dir",
+        "-f0", "--fold_0_dir",
         required=True,
         help=f"The directory where fold 0 interpretations are.",
     )
     parser.add_argument(
-        "--fold_1_dir",
+        "-f1", "--fold_1_dir",
         required=True,
         help=f"The directory where fold 1 interpretations are.",
     )
     parser.add_argument(
-        "--fold_2_dir",
+        "-f2", "--fold_2_dir",
         required=True,
         help=f"The directory where fold 2 interpretations are.",
     )
     parser.add_argument(
-        "--fold_3_dir",
+        "-f3", "--fold_3_dir",
         required=True,
         help=f"The directory where fold 3 interpretations are.",
     )
     parser.add_argument(
-        "--fold_4_dir",
+        "-f4", "--fold_4_dir",
         required=True,
         help=f"The directory where fold 4 interpretations are.",
     )
     parser.add_argument(
-        "--save_dir",
+        "-o", "--out_dir",
         required=True,
         help=f"The directory to save averaged interpretations to.",
     )
@@ -109,5 +109,5 @@ if __name__ == "__main__":
     main()
 
 """
-uv run python -m src.shap.average_interpretations --fold_0_dir ~/varscore_test/fold_0_interpretations --fold_1_dir ~/varscore_test/fold_1_interpretations --fold_2_dir ~/varscore_test/fold_2_interpretations --fold_3_dir ~/varscore_test/fold_3_interpretations --fold_4_dir ~/varscore_test/fold_4_interpretations --save_dir ~/varscore_test/average_interpretations
+uv run python -m src.shap.average_interpretations --fold_0_dir ~/varscore_test/fold_0_interpretations --fold_1_dir ~/varscore_test/fold_1_interpretations --fold_2_dir ~/varscore_test/fold_2_interpretations --fold_3_dir ~/varscore_test/fold_3_interpretations --fold_4_dir ~/varscore_test/fold_4_interpretations --out_dir ~/varscore_test/average_interpretations
 """
