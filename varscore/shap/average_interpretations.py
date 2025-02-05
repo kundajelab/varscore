@@ -58,12 +58,12 @@ def average_interpretations(
     np.savez(
         os.path.join(out_dir, "ref_finemo_input.npz"),
         sequences=ref_finemo_sequences,
-        contribs=ref_finemo_contribs,
+        contributions=ref_finemo_contribs,
     )
     np.savez(
         os.path.join(out_dir, "alt_finemo_input.npz"),
         sequences=alt_finemo_sequences,
-        contribs=alt_finemo_contribs,
+        contributions=alt_finemo_contribs,
     )
 
 
