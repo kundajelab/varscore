@@ -28,8 +28,9 @@ def plot_variants(
         os.path.join(plotting_data_dir, "average_alt_profiles.npy")
     )
     alt_shaps = np.load(os.path.join(plotting_data_dir, "average_alt_shaps.npy"))
-    ref_hits = pd.read_csv(os.path.join(plotting_data_dir, "ref_hits.tsv"), sep="\t")
-    alt_hits = pd.read_csv(os.path.join(plotting_data_dir, "alt_hits.tsv"), sep="\t")
+    # TODO: generalize / add options for these
+    ref_hits = pd.read_csv(os.path.join(plotting_data_dir, "ref_hits", "hits.tsv"), sep="\t")
+    alt_hits = pd.read_csv(os.path.join(plotting_data_dir, "alt_hits", "hits.tsv"), sep="\t")
     # Prepare plotting
     payloads = []
     for index, row in variants_df.iterrows():
@@ -43,21 +44,23 @@ def plot_variants(
         alt_length = len(alt)
         # title = f"{row['chr']}@{row['pos']}:{ref}->{alt}"
         ref_hits_i = []
-        for _, row in ref_hits[ref_hits["peak_id"] == index].iterrows():
+        for _, row in ref_hits[(ref_hits["peak_id"] == index) & (ref_hits["hit_correlation"] > 0.9) & (ref_hits["strand"] == "+")].iterrows():
             ref_hits_i.append(
                 {
                     "start": row["start"],
                     "end": row["end"],
-                    "motif_name": row["motif_name"],
+                    # Get only relevant part of the motif name
+                    # e.g. "pos_1_patterns.ATF3#1_232" -> "ATF3#1"
+                    "motif_name": row["motif_name"].split("patterns.")[1].rsplit("_", 1)[0],
                 }
             )
         alt_hits_i = []
-        for _, row in alt_hits[alt_hits["peak_id"] == index].iterrows():
+        for _, row in alt_hits[(alt_hits["peak_id"] == index)  & (alt_hits["hit_correlation"] > 0.9) & (alt_hits["strand"] == "+")].iterrows():
             alt_hits_i.append(
                 {
                     "start": row["start"],
                     "end": row["end"],
-                    "motif_name": row["motif_name"],
+                    "motif_name": row["motif_name"].split("patterns.")[1].rsplit("_", 1)[0],
                 }
             )
         payloads.append(
@@ -151,11 +154,11 @@ def parser():
 if __name__ == "__main__":
     args = parser().parse_args()
     plot_variants(args.variants_loc, args.plotting_data_dir, args.out_path, args.num_cpus)
-    print("hi")
-    plot_variants(
-        "/users/salil512/varscore_test/test_variants.tsv",
-        "/users/salil512/varscore_test/average_interpretations",
-        "/users/salil512/varscore_test/tsv_with_imgs.tsv",
-        4,
-    )
-    print("done")
+    # print("hi")
+    # plot_variants(
+    #     "/users/riyasinh/projects/varscore/plot_dir/variants.csv",
+    #     "/users/riyasinh/projects/varscore/plot_dir",
+    #     "/users/riyasinh/projects/varscore/plot_dir/variants_with_plots.tsv",
+    #     4,
+    # )
+    # print("done")

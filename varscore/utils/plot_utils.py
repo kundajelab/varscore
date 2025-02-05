@@ -206,6 +206,7 @@ def _plot_shap(
         allele2_plotted_hits = []
         for hit in allele1_hits:
             if hit["start"]  >= (C - F) and hit["end"] < (C + F + allele1_length):
+                print(hit["start"], hit["end"], hit["motif_name"], hit["start"] - C, hit["end"] - C)
                 allele1_plotted_hits.append((hit["start"] - C, hit["end"] - C, hit["motif_name"]))
             if hit["start"]  >= (C - F) and hit["end"] < (C + F + allele2_length):
                 allele2_plotted_hits.append((hit["start"] - C, hit["end"] - C, hit["motif_name"]))
@@ -276,10 +277,30 @@ def _plotter_shap(
     )
     ax1.set_ylim(bottom=ymin, top=ymax)
     ax2.set_ylim(bottom=ymin, top=ymax)
-    for hit in allele1_hits:
-        ax1.add_patch(plt.Rectangle((hit[0]-0.5, ymin), hit[1]+0.5 - hit[0], ymax - ymin, color="blue", alpha=0.3))
-    for hit in allele2_hits:
-        ax1.add_patch(plt.Rectangle((hit[0]-0.5, ymin), hit[1]+0.5 - hit[0], ymax - ymin, color="blue", alpha=0.3))
+    for i, hit in enumerate(allele1_hits):
+        ax1.add_patch(plt.Rectangle((hit[0], ymin), hit[1] - hit[0], ymax - ymin, color="blue", alpha=0.2))
+        ax1.text(
+            hit[0] + (hit[1] - hit[0]) / 2,
+            ymax + 0.15 * ymax * (i % 2), # Alternate height for hits
+            hit[2],
+            verticalalignment="top",
+            horizontalalignment="center",
+            size=8,
+            color="black",
+            bbox=dict(boxstyle="round", facecolor="white", edgecolor="lightgrey"),
+        )
+    for i, hit in enumerate(allele2_hits):
+        ax2.add_patch(plt.Rectangle((hit[0], ymin), hit[1] - hit[0], ymax - ymin, color="blue", alpha=0.2))
+        ax2.text(
+            hit[0] + (hit[1] - hit[0]) / 2,
+            ymax + 0.15 * ymax * (i % 2), # Alternate height for hits
+            hit[2],
+            verticalalignment="top",
+            horizontalalignment="center",
+            size=8,
+            color="black",
+            bbox=dict(boxstyle="round", facecolor="white", edgecolor="lightgrey"),
+        )
     plt.text(
         0.988,
         0.903,
