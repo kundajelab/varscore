@@ -168,11 +168,12 @@ def _plot_shap(
         allele2_plotted_hits = []
         for hit in allele1_hits:
             if hit["start"]  >= (C - F) and hit["end"] < (C + F + allele1_length):
-                hit_start = hit["start"] - F + (allele1_length - allele1_length if hit["start"] >= C + allele1_length else 0) # Forward over allele gap
-                hit_end = hit["end"] - F + (allele1_length - allele1_length if hit["end"] >= C + allele1_length else 0) # Forward over allele gap
-                allele1_plotted_hits.append((hit_start - F, hit_end - F, hit["motif_name"]))
+                hit_start = hit["start"] - C + (allele1_length - allele1_length if hit["start"] >= C + allele1_length else 0) # Forward over allele gap
+                hit_end = hit["end"] - C + (allele1_length - allele1_length if hit["end"] >= C + allele1_length else 0) # Forward over allele gap
+                allele1_plotted_hits.append((hit_start, hit_end, hit["motif_name"]))
+        for hit in allele2_hits:
             if hit["start"]  >= (C - F) and hit["end"] < (C + F + allele2_length):
-                allele2_plotted_hits.append((hit["start"] - F, hit["end"] - F, hit["motif_name"])) # In an insertion, allele2 hits are normal
+                allele2_plotted_hits.append((hit["start"] - C, hit["end"] - C, hit["motif_name"])) # In an insertion, allele2 hits are normal
         
         vlines = [-0.5, allele2_length - 0.5]
     elif allele1_length > allele2_length:
@@ -188,13 +189,16 @@ def _plot_shap(
 
         allele1_plotted_hits = []
         allele2_plotted_hits = []
-        for hit in allele1_hits:
+        for hit in allele1_hits:  
             if hit["start"]  >= (C - F) and hit["end"] < (C + F + allele1_length):
-                allele1_plotted_hits.append((hit["start"] - F, hit["end"] - F, hit["motif_name"])) # In a deletion, allele1 hits are normal
+                print(hit["start"], hit["end"], hit["motif_name"], hit["start"] - C, hit["end"] - C)
+                allele1_plotted_hits.append((hit["start"] - C, hit["end"] - C, hit["motif_name"])) # In a deletion, allele1 hits are normal
+        for hit in allele2_hits:
             if hit["start"]  >= (C - F) and hit["end"] < (C + F + allele2_length):
-                hit_start = hit["start"] - F + (allele1_length - allele2_length if hit["start"] >= C + allele2_length else 0) # Forward over allele gap
-                hit_end = hit["end"] - F + (allele1_length - allele2_length if hit["end"] >= C + allele2_length else 0) # Forward over allele gap
-                allele2_plotted_hits.append((hit_start - F, hit_end - F, hit["motif_name"]))
+                hit_start = hit["start"] - C + (allele1_length - allele2_length if hit["start"] >= C + allele2_length else 0) # Forward over allele gap
+                hit_end = hit["end"] - C + (allele1_length - allele2_length if hit["end"] >= C + allele2_length else 0) # Forward over allele gap
+                print(hit["start"], hit["end"], hit_start, hit_end, hit["motif_name"], hit["start"] - C, hit["end"] - C)
+                allele2_plotted_hits.append((hit_start, hit_end, hit["motif_name"]))
         
         vlines = [-0.5, allele1_length - 0.5]
     else:
@@ -206,9 +210,11 @@ def _plot_shap(
         allele2_plotted_hits = []
         for hit in allele1_hits:
             if hit["start"]  >= (C - F) and hit["end"] < (C + F + allele1_length):
-                print(hit["start"], hit["end"], hit["motif_name"], hit["start"] - C, hit["end"] - C)
+                # print(hit["start"], hit["end"], hit["motif_name"], hit["start"] - C, hit["end"] - C)
                 allele1_plotted_hits.append((hit["start"] - C, hit["end"] - C, hit["motif_name"]))
+        for hit in allele2_hits:
             if hit["start"]  >= (C - F) and hit["end"] < (C + F + allele2_length):
+                # print(hit["start"], hit["end"], hit["motif_name"], hit["start"] - C, hit["end"] - C)
                 allele2_plotted_hits.append((hit["start"] - C, hit["end"] - C, hit["motif_name"]))
         
         vlines = [-0.5, allele1_length - 0.5]
