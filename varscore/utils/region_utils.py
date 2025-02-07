@@ -101,7 +101,7 @@ GENE_DF_LOC = os.path.join(os.path.dirname(__file__), "..", "data", "gene_df.tsv
 GENES_BY_CHRO = __load_genes_by_chro()
 
 
-def nearest_genes(chro, pos, num_genes=3):
+def nearest_genes(chro, pos, num_genes=5):
     genes_chro = GENES_BY_CHRO[chro].copy()
     strand_sign = 1 * (genes_chro["strand"] == "+") - 1 * (genes_chro["strand"] == "-")
 

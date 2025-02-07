@@ -192,7 +192,7 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
 
 
 if __name__ == "__main__":
-    tv = VariantAnnotationInput(chr="chr7", pos=27220000, ref="A", alt="TT")
+    tv = VariantAnnotationInput(chr="chr6", pos=14501369, ref="A", alt="G")
     print(tv)
     av = annotate_variant(tv)
     print(av)
