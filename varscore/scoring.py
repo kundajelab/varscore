@@ -73,7 +73,7 @@ def _compute_lfc(ref_logcts, alt_logcts):
         ref_logcts: Reference allele logcounts. Shape: (N, 1).
         alt_logcts: Alternate allele logcounts. Shape: (N, 1).
     """
-    return (alt_logcts - ref_logcts) / np.exp(2)
+    return (alt_logcts - ref_logcts) / np.log(2)
 
 def _compute_lfc_pval(ref_logcts, alt_logcts):
     """Computes LFC p-values.
