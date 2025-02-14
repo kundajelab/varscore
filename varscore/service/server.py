@@ -22,6 +22,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    """
+    A simple root endpoint to check if the server is running.
+    """
+    return {"message": "Hello World"}
+
 @app.post("/annotate")
 async def annotate(input: VariantAnnotationInput) -> AnnotatedVariant:
     return annotate_variant(input)
