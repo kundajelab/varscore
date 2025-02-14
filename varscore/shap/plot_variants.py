@@ -114,7 +114,7 @@ def _plot_variant_to_utf8(
     )
     # Encode image in UTF-8
     buf = io.BytesIO()
-    fig.savefig(buf, format="svg")
+    fig.savefig(buf, bbox_inches="tight", format="svg")
     plt.close(fig)
     buf.seek(0)
     utf8_plot = base64.b64encode(buf.read()).decode("utf-8")
