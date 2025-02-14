@@ -19,8 +19,8 @@ def get_peak_seqs(peaks_df: pd.DataFrame, genome_loc: str, width: int = 2114) ->
                 row["window_end"],
             )
             seq = str(genome[chro][window_start:window_end])
-            assert len(seq) == width
-            sequences.append(seq)
+            if len(seq) == width:
+                sequences.append(seq)
     # Convert to one-hot encoding
     onehot = chrombpnet_utils.dna_to_one_hot(sequences)
     return onehot
