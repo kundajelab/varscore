@@ -173,7 +173,7 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
         var_chr, var_pos, var_pos + var_ref_length - 1
     )
     var_nearest_genes, var_gene_within_100kb = region_utils.nearest_genes(
-        var_chr, var_pos, num_genes=3
+        var_chr, var_pos, num_genes=5
     )
     # Instantiate AnnotatedVariant
     return AnnotatedVariant(

@@ -15,7 +15,7 @@ uv sync
 Build:
 
 ```bash
-docker build -t kundajelab/varscore:dev -f Dockerfile.lib .
+docker build -t kundajelab/varscore:dev -f Dockerfile .
 ```
 
 Sanity check to make sure it works (PLEASE DO BEFORE PUSHING):
