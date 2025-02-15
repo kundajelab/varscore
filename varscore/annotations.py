@@ -148,6 +148,8 @@ class AnnotatedVariant(BaseModel):
     region_type: str
     nearest_genes: List[Tuple[str, int]]
     gene_within_100kb: bool
+    ccre_id: str
+    ccre_group: str
 
 
 def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
@@ -175,6 +177,9 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
     var_nearest_genes, var_gene_within_100kb = region_utils.nearest_genes(
         var_chr, var_pos, num_genes=5
     )
+    var_ccre = region_utils.ccre_overlap(var_chr, var_pos)
+    var_ccre_id = var_ccre.accession
+    var_ccre_group = var_ccre.group
     # Instantiate AnnotatedVariant
     return AnnotatedVariant(
         chr=var_chr,
@@ -188,6 +193,8 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
         region_type=var_region_type,
         nearest_genes=var_nearest_genes,
         gene_within_100kb=var_gene_within_100kb,
+        ccre_id=var_ccre_id,
+        ccre_group=var_ccre_group,
     )
 
 

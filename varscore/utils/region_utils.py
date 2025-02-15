@@ -1,8 +1,12 @@
 from intervaltree import IntervalTree
 import numpy as np
 import pandas as pd
+import requests
+from pydantic import BaseModel
 
 import os
+import time
+import asyncio
 import pickle
 
 
@@ -122,3 +126,48 @@ def nearest_genes(chro, pos, num_genes=5):
     ]
     gene_within_100kb = genes_chro.loc[0, "dist"] <= 100000
     return nearest_genes, gene_within_100kb
+
+################
+# CCRE Overlap #
+################
+
+query = """
+query GetCCREs(
+  $coordinates: [GenomicRangeInput!]
+  $assembly: String!
+) {
+  cCREQuery(
+    coordinates: $coordinates
+    assembly: $assembly
+  ) {
+    accession
+    group
+  }
+}
+"""
+screen_base_url = "https://factorbook.api.wenglab.org/graphql"
+session = requests.Session()
+last_request_time = 0
+RATE_LIMIT_SECONDS = 0.5
+
+class CCRE(BaseModel):
+    accession: str
+    group: str
+
+def ccre_overlap(chr, pos):
+    global last_request_time
+    now = time.time()
+    
+    # Ensure we wait if the last request was too recent
+    time_since_last = now - last_request_time
+    if time_since_last < RATE_LIMIT_SECONDS:
+        time.sleep(RATE_LIMIT_SECONDS - time_since_last)
+
+    coordinates = [{"chromosome": chr, "start": pos, "end": pos}]
+    variables = {"coordinates": coordinates, "assembly": "GRCh38"}
+    response = requests.post(screen_base_url, json={"query": query, "variables": variables})
+    last_request_time = time.time()  # Update last request timestamp
+    ccre_data = response.json()["data"]["cCREQuery"]
+    if len(ccre_data) == 0:
+        return None
+    return CCRE(**ccre_data[0])
