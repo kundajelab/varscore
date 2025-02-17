@@ -1,7 +1,7 @@
 import pandas as pd
 from pydantic import BaseModel
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import varscore.utils.region_utils as region_utils
 
@@ -146,10 +146,10 @@ class AnnotatedVariant(BaseModel):
     variant_length: int
     variant_type: str
     region_type: str
-    nearest_genes: List[Tuple[str, int]]
+    nearest_genes: List[Tuple[str, int, str]]
     gene_within_100kb: bool
-    ccre_id: str
-    ccre_group: str
+    ccre_id: Optional[str]
+    ccre_group: Optional[str]
 
 
 def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
@@ -178,8 +178,8 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
         var_chr, var_pos, num_genes=5
     )
     var_ccre = region_utils.ccre_overlap(var_chr, var_pos)
-    var_ccre_id = var_ccre.accession
-    var_ccre_group = var_ccre.group
+    var_ccre_id = var_ccre.accession if var_ccre else None
+    var_ccre_group = var_ccre.group if var_ccre else None
     # Instantiate AnnotatedVariant
     return AnnotatedVariant(
         chr=var_chr,

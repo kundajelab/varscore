@@ -121,7 +121,7 @@ def nearest_genes(chro, pos, num_genes=5):
     genes_chro = genes_chro.reset_index(drop=True)
 
     nearest_genes = [
-        [genes_chro.loc[i, "gene"], genes_chro.loc[i, "signed_dist"]]
+        [genes_chro.loc[i, "gene"], genes_chro.loc[i, "signed_dist"], genes_chro.loc[i, "gene_type"]]
         for i in range(num_genes)
     ]
     gene_within_100kb = genes_chro.loc[0, "dist"] <= 100000
