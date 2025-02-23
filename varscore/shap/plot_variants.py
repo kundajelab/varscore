@@ -29,40 +29,81 @@ def plot_variants(
     )
     alt_shaps = np.load(os.path.join(plotting_data_dir, "average_alt_shaps.npy"))
     # TODO: generalize / add options for these
-    ref_hits = pd.read_csv(os.path.join(plotting_data_dir, "ref_hits", "hits.tsv"), sep="\t")
-    alt_hits = pd.read_csv(os.path.join(plotting_data_dir, "alt_hits", "hits.tsv"), sep="\t")
+    ref_hits = pd.read_csv(
+        os.path.join(plotting_data_dir, "ref_hits", "hits.tsv"), sep="\t"
+    )
+    alt_hits = pd.read_csv(
+        os.path.join(plotting_data_dir, "alt_hits", "hits.tsv"), sep="\t"
+    )
     # Prepare plotting
     payloads = []
+    ref_motifs = []  # Track motifs that overlap variants
+    alt_motifs = []  # Track motifs that overlap variants
     for index, row in variants_df.iterrows():
         ref_profile = ref_counts_profile[index]
         alt_profile = alt_counts_profile[index]
         ref_shap = ref_shaps[index]
         alt_shap = alt_shaps[index]
+        pos = 2114 // 2
         ref = row["ref"]
         alt = row["alt"]
         ref_length = len(ref)
         alt_length = len(alt)
         # title = f"{row['chr']}@{row['pos']}:{ref}->{alt}"
+        # Ref motif analysis
         ref_hits_i = []
-        for _, row in ref_hits[(ref_hits["peak_id"] == index) & (ref_hits["hit_correlation"] > 0.9) & (ref_hits["strand"] == "+")].iterrows():
+        ref_motifs_i = []
+        for _, row in ref_hits[
+            (ref_hits["peak_id"] == index)
+            & (ref_hits["hit_correlation"] > 0.9)
+            & (ref_hits["strand"] == "+")
+        ].iterrows():
             ref_hits_i.append(
                 {
                     "start": row["start"],
                     "end": row["end"],
                     # Get only relevant part of the motif name
                     # e.g. "pos_1_patterns.ATF3#1_232" -> "ATF3#1"
-                    "motif_name": row["motif_name"].split("patterns.")[1].rsplit("_", 1)[0],
+                    "motif_name": row["motif_name"]
+                    .split("patterns.")[1]
+                    .rsplit("_", 1)[0],
                 }
             )
+            if (
+                ((pos <= row["start"]) and (row["start"] <= pos + ref_length - 1))
+                or ((pos <= row["end"]) and (row["end"] <= pos + ref_length - 1))
+                or ((row["start"] <= pos) and (pos + ref_length - 1 <= row["end"]))
+            ):
+                ref_motifs_i.append(
+                    row["motif_name"].split("patterns.")[1].rsplit("_", 1)[0]
+                )
+        ref_motifs.append(ref_motifs_i)
+        # Alt motif analysis
         alt_hits_i = []
-        for _, row in alt_hits[(alt_hits["peak_id"] == index)  & (alt_hits["hit_correlation"] > 0.9) & (alt_hits["strand"] == "+")].iterrows():
+        alt_motifs_i = []
+        for _, row in alt_hits[
+            (alt_hits["peak_id"] == index)
+            & (alt_hits["hit_correlation"] > 0.9)
+            & (alt_hits["strand"] == "+")
+        ].iterrows():
             alt_hits_i.append(
                 {
                     "start": row["start"],
                     "end": row["end"],
-                    "motif_name": row["motif_name"].split("patterns.")[1].rsplit("_", 1)[0],
+                    "motif_name": row["motif_name"]
+                    .split("patterns.")[1]
+                    .rsplit("_", 1)[0],
                 }
             )
+            if (
+                ((pos <= row["start"]) and (row["start"] <= pos + ref_length - 1))
+                or ((pos <= row["end"]) and (row["end"] <= pos + ref_length - 1))
+                or ((row["start"] <= pos) and (pos + ref_length - 1 <= row["end"]))
+            ):
+                alt_motifs_i.append(
+                    row["motif_name"].split("patterns.")[1].rsplit("_", 1)[0]
+                )
+        alt_motifs.append(alt_motifs_i)
         payloads.append(
             (
                 ref_profile,
@@ -75,7 +116,7 @@ def plot_variants(
                 alt_length,
                 ref,
                 alt,
-                800
+                800,
             )
         )
     # Plot
@@ -83,6 +124,8 @@ def plot_variants(
         plot_strings = p.starmap(_plot_variant_to_utf8, payloads)
     # Save
     variants_df["plot"] = plot_strings
+    variants_df["ref_motif"] = ref_motifs
+    variants_df["alt_motif"] = alt_motifs
     variants_df.to_csv(out_path, sep="\t", index=False)
 
 
@@ -97,7 +140,7 @@ def _plot_variant_to_utf8(
     allele2_length,
     allele1_label,
     allele2_label,
-    window_size
+    window_size,
 ):
     fig = plot_utils.variant_plot(
         allele1_pred,
@@ -110,7 +153,7 @@ def _plot_variant_to_utf8(
         allele2_length,
         allele1_label,
         allele2_label,
-        window_size
+        window_size,
     )
     # Encode image in UTF-8
     buf = io.BytesIO()
@@ -153,7 +196,9 @@ def parser():
 
 if __name__ == "__main__":
     args = parser().parse_args()
-    plot_variants(args.variants_loc, args.plotting_data_dir, args.out_path, args.num_cpus)
+    plot_variants(
+        args.variants_loc, args.plotting_data_dir, args.out_path, args.num_cpus
+    )
     # print("hi")
     # plot_variants(
     #     "/users/riyasinh/projects/varscore/plot_dir/variants.csv",

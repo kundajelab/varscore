@@ -52,6 +52,7 @@ def interpret(
 # MAIN #
 ########
 
+
 def _parse_args():
     parser = argparse.ArgumentParser(
         description="Interpret variants using a trained model and save the results."
@@ -66,7 +67,10 @@ def _parse_args():
         "-g", "--genome_loc", required=True, help="Location of the genome file."
     )
     parser.add_argument(
-        "-o", "--output_dir", required=True, help="The directory to save all outputs to."
+        "-o",
+        "--output_dir",
+        required=True,
+        help="The directory to save all outputs to.",
     )
     return parser.parse_args()
 

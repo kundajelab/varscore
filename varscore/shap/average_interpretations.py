@@ -45,10 +45,18 @@ def average_interpretations(
     alt_profile = alt_exp_logits / np.sum(alt_exp_logits, axis=1, keepdims=True)
     alt_counts_profile = np.exp(alt_avg_logcts) * alt_profile
     # Prepare FiNeMo inputs
-    ref_finemo_sequences = (ref_avg_shaps != 0).astype(np.int8).transpose(0, 2, 1) # Transpose so (N, L, 4) -> (N, 4, L)
-    ref_finemo_contribs = np.sum(ref_avg_shaps, axis=2).astype(np.float16) # (N, L, 4) -> (N, L)
-    alt_finemo_sequences = (alt_avg_shaps != 0).astype(np.int8).transpose(0, 2, 1) # Transpose so (N, L, 4) -> (N, 4, L)
-    alt_finemo_contribs = np.sum(alt_avg_shaps, axis=2).astype(np.float16) # (N, L, 4) -> (N, L)
+    ref_finemo_sequences = (
+        (ref_avg_shaps != 0).astype(np.int8).transpose(0, 2, 1)
+    )  # Transpose so (N, L, 4) -> (N, 4, L)
+    ref_finemo_contribs = np.sum(ref_avg_shaps, axis=2).astype(
+        np.float16
+    )  # (N, L, 4) -> (N, L)
+    alt_finemo_sequences = (
+        (alt_avg_shaps != 0).astype(np.int8).transpose(0, 2, 1)
+    )  # Transpose so (N, L, 4) -> (N, 4, L)
+    alt_finemo_contribs = np.sum(alt_avg_shaps, axis=2).astype(
+        np.float16
+    )  # (N, L, 4) -> (N, L)
     # Save
     os.makedirs(out_dir, exist_ok=True)
     np.save(os.path.join(out_dir, "average_ref_profiles.npy"), ref_counts_profile)
@@ -88,32 +96,38 @@ def _parse_args():
         description="Average interpretations across multiple folds and save the results."
     )
     parser.add_argument(
-        "-f0", "--fold_0_dir",
+        "-f0",
+        "--fold_0_dir",
         required=True,
         help=f"The directory where fold 0 interpretations are.",
     )
     parser.add_argument(
-        "-f1", "--fold_1_dir",
+        "-f1",
+        "--fold_1_dir",
         required=True,
         help=f"The directory where fold 1 interpretations are.",
     )
     parser.add_argument(
-        "-f2", "--fold_2_dir",
+        "-f2",
+        "--fold_2_dir",
         required=True,
         help=f"The directory where fold 2 interpretations are.",
     )
     parser.add_argument(
-        "-f3", "--fold_3_dir",
+        "-f3",
+        "--fold_3_dir",
         required=True,
         help=f"The directory where fold 3 interpretations are.",
     )
     parser.add_argument(
-        "-f4", "--fold_4_dir",
+        "-f4",
+        "--fold_4_dir",
         required=True,
         help=f"The directory where fold 4 interpretations are.",
     )
     parser.add_argument(
-        "-o", "--out_dir",
+        "-o",
+        "--out_dir",
         required=True,
         help=f"The directory to save averaged interpretations to.",
     )

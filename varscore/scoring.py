@@ -42,42 +42,63 @@ def score_variants(
 
     # Load model
     model = chrombpnet_utils.load_chrombpnet(model_loc)
-    
+
     # Load peak distribution
     peaks_dist = np.load(peaks_dist_loc)
-    
+
     # Make predictions
     ref_pred_logits, ref_pred_logcts = chrombpnet_utils.predict(model, ref_seqs)
     alt_pred_logits, alt_pred_logcts = chrombpnet_utils.predict(model, alt_seqs)
-    
+
     # Score variants
-    _score_variant_df(variant_df, ref_pred_logits, alt_pred_logits, ref_pred_logcts, alt_pred_logcts, peaks_dist)
-    
+    _score_variant_df(
+        variant_df,
+        ref_pred_logits,
+        alt_pred_logits,
+        ref_pred_logcts,
+        alt_pred_logcts,
+        peaks_dist,
+    )
+
     # Save
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     variant_df.to_csv(out_path, sep="\t", index=False)
-    
-def _score_variant_df(variant_df, ref_pred_logits, alt_pred_logits, ref_pred_logcts, alt_pred_logcts, peaks_dist):
+
+
+def _score_variant_df(
+    variant_df,
+    ref_pred_logits,
+    alt_pred_logits,
+    ref_pred_logcts,
+    alt_pred_logcts,
+    peaks_dist,
+):
     variant_df["lfc"] = _compute_lfc(ref_pred_logcts, alt_pred_logcts)
     # TODO: test this more before enabling; gives NaNs somewhat often?
     # variant_df["lfc_pval"] = _compute_lfc_pval(ref_pred_logcts, alt_pred_logcts)
     variant_df["jsd"] = _compute_jsd(ref_pred_logits, alt_pred_logits)
-    variant_df["active_allele_quantile"] = _compute_active_allele_quantile( ref_pred_logcts, alt_pred_logcts, peaks_dist)
-    variant_df["ips"] = _compute_ips(variant_df["lfc"], variant_df["jsd"], variant_df["active_allele_quantile"])
+    variant_df["active_allele_quantile"] = _compute_active_allele_quantile(
+        ref_pred_logcts, alt_pred_logcts, peaks_dist
+    )
+    variant_df["ips"] = _compute_ips(
+        variant_df["lfc"], variant_df["jsd"], variant_df["active_allele_quantile"]
+    )
     return variant_df
+
 
 def _compute_lfc(ref_logcts, alt_logcts):
     """Computes LFC.
-    
+
     Args:
         ref_logcts: Reference allele logcounts. Shape: (N, 1).
         alt_logcts: Alternate allele logcounts. Shape: (N, 1).
     """
     return (alt_logcts - ref_logcts) / np.log(2)
 
+
 def _compute_lfc_pval(ref_logcts, alt_logcts):
     """Computes LFC p-values.
-    
+
     Args:
         ref_logcts: Reference allele logcounts. Shape: (N, 1).
         alt_logcts: Alternate allele logcounts. Shape: (N, 1).
@@ -86,9 +107,10 @@ def _compute_lfc_pval(ref_logcts, alt_logcts):
     total_cts = np.exp(ref_logcts) + np.exp(alt_logcts)
     return [binom.cdf(min_cts[i], total_cts[i], 0.5) for i in range(len(ref_logcts))]
 
+
 def _compute_jsd(ref_logits, alt_logits):
     """Computes JSD.
-    
+
     Args:
         ref_logits: Reference allele logits. Shape: (N, 1000).
         alt_logits: Alternate allele logits. Shape: (N, 1000).
@@ -98,22 +120,24 @@ def _compute_jsd(ref_logits, alt_logits):
     return np.squeeze(
         [jensenshannon(x, y, base=2.0) for x, y in zip(ref_profile, alt_profile)]
     )
-    
+
+
 def _compute_active_allele_quantile(ref_logcts, alt_logcts, peaks_dist):
     """
     Computes the active allele quantile.
-    
+
     Args:
         ref_logcts: Reference allele logcounts. Shape: (N, 1).
         alt_logcts: Alternate allele logcounts. Shape: (N, 1).
         peaks_dist: Peak distribution. Shape: (1000,).
-    
+
     Returns:
         active_allele_quantile: Active allele quantile. Shape: (N, 1).
     """
     ref_quantiles = np.searchsorted(peaks_dist, ref_logcts) / len(peaks_dist)
     alt_quantiles = np.searchsorted(peaks_dist, alt_logcts) / len(peaks_dist)
     return np.maximum(ref_quantiles, alt_quantiles)
+
 
 def _compute_ips(lfc, jsd, active_allele_quantile):
     return lfc * jsd * active_allele_quantile
@@ -148,7 +172,8 @@ def _parse_args():
         "-g", "--genome_loc", required=True, help="Location of the genome file."
     )
     parser.add_argument(
-        "-p", "--peaks_dist_loc",
+        "-p",
+        "--peaks_dist_loc",
         required=True,
         help="Location of the peaks distribution file.",
     )

@@ -5,7 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import pandas as pd
 from varscore.prioritization import prioritize_variants
-from varscore.annotations import VariantAnnotationInput, AnnotatedVariant, annotate_variant
+from varscore.annotations import (
+    VariantAnnotationInput,
+    AnnotatedVariant,
+    annotate_variant,
+)
 
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -22,6 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 async def root():
     """
@@ -29,14 +34,17 @@ async def root():
     """
     return {"message": "Hello World"}
 
+
 @app.post("/annotate")
 async def annotate(input: VariantAnnotationInput) -> AnnotatedVariant:
     return annotate_variant(input)
+
 
 @app.post("/prioritize/")
 async def predict(input_data: List[dict]) -> List[dict]:
     df = pd.DataFrame(input_data)
     return prioritize_variants(df).to_dict(orient="records")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)

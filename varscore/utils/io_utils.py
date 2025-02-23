@@ -7,7 +7,9 @@ from typing import Tuple
 import varscore.utils.chrombpnet_utils as chrombpnet_utils
 
 
-def get_peak_seqs(peaks_df: pd.DataFrame, genome_loc: str, width: int = 2114) -> np.ndarray:
+def get_peak_seqs(
+    peaks_df: pd.DataFrame, genome_loc: str, width: int = 2114
+) -> np.ndarray:
     """Get one-hot encoded peak sequences from peaks."""
     # Load sequences
     sequences = []
@@ -27,6 +29,8 @@ def get_peak_seqs(peaks_df: pd.DataFrame, genome_loc: str, width: int = 2114) ->
 
 
 NARROWPEAK_SCHEMA = ["chr", "start", "end", "4", "5", "6", "7", "8", "9", "summit"]
+
+
 def load_peaks(peaks_loc: str, width: int = 2114) -> pd.DataFrame:
     """Load a peaks DataFrame, add window start/stop columns."""
     peaks_df = pd.read_csv(peaks_loc, sep="\t", names=NARROWPEAK_SCHEMA)
@@ -37,7 +41,9 @@ def load_peaks(peaks_loc: str, width: int = 2114) -> pd.DataFrame:
     return peaks_df
 
 
-def get_variant_seqs(variants_df: pd.DataFrame, genome_loc: str, width: int = 2114) -> Tuple[np.ndarray, np.ndarray]:
+def get_variant_seqs(
+    variants_df: pd.DataFrame, genome_loc: str, width: int = 2114
+) -> Tuple[np.ndarray, np.ndarray]:
     """Get one-hot encoded ref/alot sequences from variants."""
     # Load sequences
     ref_sequences = []
@@ -72,6 +78,8 @@ def get_variant_seqs(variants_df: pd.DataFrame, genome_loc: str, width: int = 21
 
 
 VARIANT_SCHEMA = ["chr", "pos", "ref", "alt", "variant_id"]
+
+
 def load_variants(variants_loc: str) -> pd.DataFrame:
     """Load a variants DataFrame."""
     variants_df = pd.read_csv(variants_loc, sep="\t", names=VARIANT_SCHEMA)

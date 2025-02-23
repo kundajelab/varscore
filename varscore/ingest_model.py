@@ -68,6 +68,7 @@ def ingest_model(
     peaks_dnatree.save(os.path.join(output_dir, filename))
     return True
 
+
 def _ingest_fold(model_loc: str, peak_seqs: np.ndarray) -> Union[np.ndarray, None]:
     """Initial processing of a single fold of a model.
 
@@ -114,13 +115,26 @@ def _parse_args():
     parser.add_argument(
         "-g", "--genome_loc", required=True, help="Location of the genome file."
     )
-    parser.add_argument("-f0", "--fold_0_loc", required=True, help="Location of fold 0 file.")
-    parser.add_argument("-f1", "--fold_1_loc", required=True, help="Location of fold 1 file.")
-    parser.add_argument("-f2", "--fold_2_loc", required=True, help="Location of fold 2 file.")
-    parser.add_argument("-f3", "--fold_3_loc", required=True, help="Location of fold 3 file.")
-    parser.add_argument("-f4", "--fold_4_loc", required=True, help="Location of fold 4 file.")
     parser.add_argument(
-        "-o", "--output_dir", required=True, help="Directory to save peaks distribution data."
+        "-f0", "--fold_0_loc", required=True, help="Location of fold 0 file."
+    )
+    parser.add_argument(
+        "-f1", "--fold_1_loc", required=True, help="Location of fold 1 file."
+    )
+    parser.add_argument(
+        "-f2", "--fold_2_loc", required=True, help="Location of fold 2 file."
+    )
+    parser.add_argument(
+        "-f3", "--fold_3_loc", required=True, help="Location of fold 3 file."
+    )
+    parser.add_argument(
+        "-f4", "--fold_4_loc", required=True, help="Location of fold 4 file."
+    )
+    parser.add_argument(
+        "-o",
+        "--output_dir",
+        required=True,
+        help="Directory to save peaks distribution data.",
     )
     return parser.parse_args()
 

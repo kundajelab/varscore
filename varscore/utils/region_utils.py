@@ -41,6 +41,7 @@ class DNATree:
         chro_trees: A dictionary of interval trees mapping a chromosome name to
           the interval tree representing regions on that chromosome.
     """
+
     def __init__(self):
         self.chro_trees = dict()
 
@@ -121,11 +122,16 @@ def nearest_genes(chro, pos, num_genes=5):
     genes_chro = genes_chro.reset_index(drop=True)
 
     nearest_genes = [
-        [genes_chro.loc[i, "gene"], genes_chro.loc[i, "signed_dist"], genes_chro.loc[i, "gene_type"]]
+        [
+            genes_chro.loc[i, "gene"],
+            genes_chro.loc[i, "signed_dist"],
+            genes_chro.loc[i, "gene_type"],
+        ]
         for i in range(num_genes)
     ]
     gene_within_100kb = genes_chro.loc[0, "dist"] <= 100000
     return nearest_genes, gene_within_100kb
+
 
 ################
 # CCRE Overlap #
@@ -150,14 +156,16 @@ session = requests.Session()
 last_request_time = 0
 RATE_LIMIT_SECONDS = 0.5
 
+
 class CCRE(BaseModel):
     accession: str
     group: str
 
+
 def ccre_overlap(chr, pos):
     global last_request_time
     now = time.time()
-    
+
     # Ensure we wait if the last request was too recent
     time_since_last = now - last_request_time
     if time_since_last < RATE_LIMIT_SECONDS:
@@ -165,7 +173,9 @@ def ccre_overlap(chr, pos):
 
     coordinates = [{"chromosome": chr, "start": pos, "end": pos}]
     variables = {"coordinates": coordinates, "assembly": "GRCh38"}
-    response = requests.post(screen_base_url, json={"query": query, "variables": variables})
+    response = requests.post(
+        screen_base_url, json={"query": query, "variables": variables}
+    )
     last_request_time = time.time()  # Update last request timestamp
     ccre_data = response.json()["data"]["cCREQuery"]
     if len(ccre_data) == 0:
