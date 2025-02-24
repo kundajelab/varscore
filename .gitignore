@@ -4,3 +4,7 @@ __pycache__
 dist/
 *.pyc
 plot_dir*/
+raw/
+
+# Large files
+ccres.dnatree

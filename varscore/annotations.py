@@ -171,13 +171,15 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
     else:
         var_variant_type = "SNV" if var_ref_length == 1 else "substitution"
 
+    var_start = var_pos
+    var_end = var_pos + var_ref_length - 1
     var_region_type = region_utils.region_type(
-        var_chr, var_pos, var_pos + var_ref_length - 1
+        var_chr, var_start, var_end
     )
     var_nearest_genes, var_gene_within_100kb = region_utils.nearest_genes(
         var_chr, var_pos, num_genes=5
     )
-    var_ccre = region_utils.ccre_overlap(var_chr, var_pos)
+    var_ccre = region_utils.ccre_overlap(var_chr, var_start, var_end)
     var_ccre_id = var_ccre.accession if var_ccre else None
     var_ccre_group = var_ccre.group if var_ccre else None
     # Instantiate AnnotatedVariant

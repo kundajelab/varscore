@@ -1,3 +1,4 @@
+import logging
 from intervaltree import IntervalTree
 import numpy as np
 import pandas as pd
@@ -81,6 +82,8 @@ GENE_DNATREE = loadDNATree(
 EXON_DNATREE = loadDNATree(
     os.path.join(os.path.dirname(__file__), "..", "data", "exons_proteincoding.dnatree")
 )
+CCRE_DNATREE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ccres.dnatree")
+CCRE_DNATREE = loadDNATree(CCRE_DNATREE_PATH) if os.path.exists(CCRE_DNATREE_PATH) else None
 
 
 def region_type(chro, start, end):
@@ -162,7 +165,21 @@ class CCRE(BaseModel):
     group: str
 
 
-def ccre_overlap(chr, pos):
+def ccre_overlap(chr, start, end):
+    """
+    Calculates variant overlap with cCREs, using a local DNATree if available, or querying the Factorbook API if not.
+    """
+    if CCRE_DNATREE:
+        element = CCRE_DNATREE.overlap(chr, start, end)
+        if element is None:
+            return None
+        data = element[0][3]
+        return CCRE(
+            accession=data[0],
+            group=data[1]
+        )
+    logger = logging.getLogger(__name__)
+    logger.warning("WARNING: CCRE DNATree not found. Querying Factorbook API. Please execute `varscore.scripts.construct_ccre_dnatree` to construct the DNATree.")
     global last_request_time
     now = time.time()
 
@@ -171,7 +188,7 @@ def ccre_overlap(chr, pos):
     if time_since_last < RATE_LIMIT_SECONDS:
         time.sleep(RATE_LIMIT_SECONDS - time_since_last)
 
-    coordinates = [{"chromosome": chr, "start": pos, "end": pos}]
+    coordinates = [{"chromosome": chr, "start": start, "end": end}]
     variables = {"coordinates": coordinates, "assembly": "GRCh38"}
     response = requests.post(
         screen_base_url, json={"query": query, "variables": variables}
@@ -181,3 +198,6 @@ def ccre_overlap(chr, pos):
     if len(ccre_data) == 0:
         return None
     return CCRE(**ccre_data[0])
+
+if __name__ == "__main__":
+    print(ccre_overlap("chr1", 58046520, 58046530))
