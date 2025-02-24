@@ -27,7 +27,8 @@ class AnnotatedVariant(BaseModel):
     variant_length: int
     variant_type: str
     region_type: str
-    nearest_genes: List[Tuple[str, int, str]]
+    nearest_genes: List[Tuple[str, str, int, str]]
+    """(gene_name, gene_id, distance, type)"""
     gene_within_100kb: bool
     ccre_id: Optional[str]
     ccre_group: Optional[str]
