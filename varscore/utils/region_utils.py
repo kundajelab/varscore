@@ -127,6 +127,7 @@ def nearest_genes(chro, pos, num_genes=5):
     nearest_genes = [
         [
             genes_chro.loc[i, "gene"],
+            genes_chro.loc[i, "gene_id"],
             genes_chro.loc[i, "signed_dist"],
             genes_chro.loc[i, "gene_type"],
         ]
