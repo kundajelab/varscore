@@ -124,8 +124,8 @@ def plot_variants(
         plot_strings = p.starmap(_plot_variant_to_utf8, payloads)
     # Save
     variants_df["plot"] = plot_strings
-    variants_df["ref_motif"] = ref_motifs
-    variants_df["alt_motif"] = alt_motifs
+    variants_df["ref_motifs"] = ",".join(ref_motifs)
+    variants_df["alt_motifs"] = ",".join(alt_motifs)
     variants_df.to_csv(out_path, sep="\t", index=False)
 
 
