@@ -359,7 +359,7 @@ def _plotter_shap(
             hit[2],
             verticalalignment="top",
             horizontalalignment="center",
-            size=2,
+            size=8,
             color="black",
             bbox=dict(boxstyle="round", facecolor="white", edgecolor="lightgrey"),
         )
@@ -375,7 +375,7 @@ def _plotter_shap(
             hit[2],
             verticalalignment="top",
             horizontalalignment="center",
-            size=2,
+            size=8,
             color="black",
             bbox=dict(boxstyle="round", facecolor="white", edgecolor="lightgrey"),
         )

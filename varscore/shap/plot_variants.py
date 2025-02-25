@@ -55,7 +55,7 @@ def plot_variants(
         ref_motifs_i = []
         for _, row in ref_hits[
             (ref_hits["peak_id"] == index)
-            & (ref_hits["hit_correlation"] > 0.9)
+            & (ref_hits["hit_correlation"] > 0.8)
             & (ref_hits["strand"] == "+")
         ].iterrows():
             ref_hits_i.append(
@@ -124,8 +124,8 @@ def plot_variants(
         plot_strings = p.starmap(_plot_variant_to_utf8, payloads)
     # Save
     variants_df["plot"] = plot_strings
-    variants_df["ref_motifs"] = ",".join(ref_motifs)
-    variants_df["alt_motifs"] = ",".join(alt_motifs)
+    variants_df["ref_motifs"] = [",".join(motifs) for motifs in ref_motifs]
+    variants_df["alt_motifs"] = [",".join(motifs) for motifs in alt_motifs]
     variants_df.to_csv(out_path, sep="\t", index=False)
 
 
