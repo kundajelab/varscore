@@ -58,7 +58,7 @@ def prioritize_variants(
     )
     # Most active celltype
     variants_LFC_list = [
-        pd.Series(variants_df[f"logfc_{m}"], name=m, dtype=float) for m in models
+        pd.Series(variants_df[f"logfc_{m}"]*~(variants_df["prioritized"] & ~variants_df[f"prioritized_{m}"]), name=m, dtype=float) for m in models
     ]
     variants_LFC = pd.concat(variants_LFC_list, axis=1)
     variants_LFC_abs = np.abs(variants_LFC)
