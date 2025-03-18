@@ -55,8 +55,7 @@ def plot_variants(
         ref_motifs_i = []
         for _, row in ref_hits[
             (ref_hits["peak_id"] == index)
-            & (ref_hits["hit_correlation"] > 0.8)
-            & (ref_hits["strand"] == "+")
+            & (ref_hits["hit_coefficient"] >= 10)
         ].iterrows():
             ref_hits_i.append(
                 {
@@ -83,8 +82,7 @@ def plot_variants(
         alt_motifs_i = []
         for _, row in alt_hits[
             (alt_hits["peak_id"] == index)
-            & (alt_hits["hit_correlation"] > 0.9)
-            & (alt_hits["strand"] == "+")
+            & (alt_hits["hit_coefficient"] >= 10)
         ].iterrows():
             alt_hits_i.append(
                 {
