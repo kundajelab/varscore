@@ -10,6 +10,37 @@ Make sure you have `uv` installed. See [here](https://docs.astral.sh/uv/) for in
 uv sync
 ```
 
+### Setup
+
+These annotations rely on large files of bulk reference data. These need to be constructed first.
+
+#### CCREs
+
+1. Download the CCRE bed file:
+```bash
+./varscore/scripts/download_ccres.sh
+```
+
+2. Run the following script to construct the DNATree from the CCRE bed file:
+```bash
+uv run python -m varscore.scripts.construct_ccre_dnatree
+```
+
+#### Variants
+
+(Specifically, minor allele frequencies for variants)
+
+1. Download the OpenTargets variant files
+```bash
+./varscore/scripts/download_variants.sh
+```
+
+2. Run the following script to construct the variants dataframe from the OpenTargets variant files:
+```bash
+uv run python -m varscore.scripts.construct_variants_df
+```
+
+
 ## Building Docker
 
 Build:
