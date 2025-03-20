@@ -7,7 +7,6 @@ from pydantic import BaseModel
 
 import os
 import time
-import asyncio
 import pickle
 
 
@@ -82,9 +81,11 @@ GENE_DNATREE = loadDNATree(
 EXON_DNATREE = loadDNATree(
     os.path.join(os.path.dirname(__file__), "..", "data", "exons_proteincoding.dnatree")
 )
-CCRE_DNATREE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ccres.dnatree")
-CCRE_DNATREE = loadDNATree(CCRE_DNATREE_PATH) if os.path.exists(CCRE_DNATREE_PATH) else None
 
+CCRE_FILEPATH = os.path.join(os.path.dirname(__file__), "..", "data", "ccres.dnatree")
+if not os.path.exists(CCRE_FILEPATH):
+    raise FileNotFoundError(f"CCRE DNATree file not found. Please see the README for instructions on how to construct the DNATree.")
+CCRE_DNATREE = loadDNATree(CCRE_FILEPATH)
 
 def region_type(chro, start, end):
     if PROMOTER_DNATREE.overlap(chro, start, end) is not None:
@@ -137,30 +138,6 @@ def nearest_genes(chro, pos, num_genes=5):
     return nearest_genes, gene_within_100kb
 
 
-################
-# CCRE Overlap #
-################
-
-query = """
-query GetCCREs(
-  $coordinates: [GenomicRangeInput!]
-  $assembly: String!
-) {
-  cCREQuery(
-    coordinates: $coordinates
-    assembly: $assembly
-  ) {
-    accession
-    group
-  }
-}
-"""
-screen_base_url = "https://factorbook.api.wenglab.org/graphql"
-session = requests.Session()
-last_request_time = 0
-RATE_LIMIT_SECONDS = 0.5
-
-
 class CCRE(BaseModel):
     accession: str
     group: str
@@ -170,35 +147,14 @@ def ccre_overlap(chr, start, end):
     """
     Calculates variant overlap with cCREs, using a local DNATree if available, or querying the Factorbook API if not.
     """
-    if CCRE_DNATREE:
-        element = CCRE_DNATREE.overlap(chr, start, end)
-        if element is None:
-            return None
-        data = element[0][3]
-        return CCRE(
-            accession=data[0],
-            group=data[1]
-        )
-    logger = logging.getLogger(__name__)
-    logger.warning("WARNING: CCRE DNATree not found. Querying Factorbook API. Please execute `varscore.scripts.construct_ccre_dnatree` to construct the DNATree.")
-    global last_request_time
-    now = time.time()
-
-    # Ensure we wait if the last request was too recent
-    time_since_last = now - last_request_time
-    if time_since_last < RATE_LIMIT_SECONDS:
-        time.sleep(RATE_LIMIT_SECONDS - time_since_last)
-
-    coordinates = [{"chromosome": chr, "start": start, "end": end}]
-    variables = {"coordinates": coordinates, "assembly": "GRCh38"}
-    response = requests.post(
-        screen_base_url, json={"query": query, "variables": variables}
-    )
-    last_request_time = time.time()  # Update last request timestamp
-    ccre_data = response.json()["data"]["cCREQuery"]
-    if len(ccre_data) == 0:
+    element = CCRE_DNATREE.overlap(chr, start, end)
+    if element is None:
         return None
-    return CCRE(**ccre_data[0])
+    data = element[0][3]
+    return CCRE(
+        accession=data[0],
+        group=data[1]
+    )
 
 if __name__ == "__main__":
     print(ccre_overlap("chr1", 58046520, 58046530))

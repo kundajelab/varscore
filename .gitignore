@@ -8,3 +8,4 @@ raw/
 
 # Large files
 ccres.dnatree
+*.gz
