@@ -8,7 +8,8 @@ import pyBigWig
 SNV_FILEPATH = "varscore/data/cadd/whole_genome_SNVs.tsv.gz"
 INDEL_FILEPATH = "varscore/data/cadd/gnomad.genomes.r4.0.indel.tsv.gz"
 
-PHYLOP_FILEPATH = "varscore/data/phylop100vertebrates.bw"
+PHYLOP_VERTEBRATES_FILEPATH = "varscore/data/phylop100vertebrates.bw"
+PHYLOP_PRIMATES_FILEPATH = "varscore/data/phylop30primates.bw"
 
 class MutationType(Enum):
     SNV = "SNV"
@@ -67,16 +68,19 @@ def get_cadd_score(chrom: str, pos: int, ref: str, alt: str) -> tuple[float, flo
     return None
   
     
-def phylop_score(chr, start, end) -> list[float]:
+def phylop_score(chr, start, end) -> list[list[float]]:
     """
     Calculates the phylop score for a given region.
     """
-    if not os.path.exists(PHYLOP_FILEPATH):
-        raise FileNotFoundError(f"PhyloP Bigwig file not found. Please see the README for instructions on how to download the file.")
-    with open(PHYLOP_FILEPATH, "rb") as f:
-        phylop = pyBigWig.open(PHYLOP_FILEPATH)
-        score = phylop.values(chr, start, end)
-    return score
+    if not os.path.exists(PHYLOP_VERTEBRATES_FILEPATH) or not os.path.exists(PHYLOP_PRIMATES_FILEPATH):
+        raise FileNotFoundError(f"PhyloP Bigwig files not found. Please see the README for instructions on how to download the file.")
+    with open(PHYLOP_VERTEBRATES_FILEPATH, "rb") as f:
+        phylop_vertebrates = pyBigWig.open(PHYLOP_VERTEBRATES_FILEPATH)
+        score_vertebrates = phylop_vertebrates.values(chr, start, end)
+    with open(PHYLOP_PRIMATES_FILEPATH, "rb") as f:
+        phylop_primates = pyBigWig.open(PHYLOP_PRIMATES_FILEPATH)
+        score_primates = phylop_primates.values(chr, start, end)
+    return [score_vertebrates, score_primates]
 
 # Example usage:
 if __name__ == "__main__":
