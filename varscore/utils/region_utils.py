@@ -1,12 +1,9 @@
-import logging
 from intervaltree import IntervalTree
 import numpy as np
 import pandas as pd
-import requests
 from pydantic import BaseModel
 
 import os
-import time
 import pickle
 
 

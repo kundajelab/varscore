@@ -28,6 +28,8 @@ dependencies = [
 	"uvicorn>=0.33.0",
 	"python-snappy>=0.7.3",
 	"pyarrow>=17.0.0",
+	"pybigwig>=0.3.22",
+	"pysam>=0.22.1",
 ]
 keywords = ["variant scoring", "variant effect", "variant prioritization", "variant", "scoring", "effect", "prioritization", "genomics", "chrombpnet"]
 

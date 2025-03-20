@@ -9,3 +9,5 @@ raw/
 # Large files
 ccres.dnatree
 *.gz
+*.bw
+*.tbi

@@ -1388,6 +1388,31 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/cc/90/cea4197772a029e925bd5d414108b5438d621dfbb1b0cc2627529d1ec524/pybedtools-0.10.0.tar.gz", hash = "sha256:1a6fbaad23b013becc741d7d5922a2df03e391bc44ff92772ffb7dd456711161", size = 12605040 }
 
 [[package]]
+name = "pybigwig"
+version = "0.3.22"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.9'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f0/57/334db9a75d6941876ef282cc7eb1885a24fe71d3c6522c19f717db4f8b73/pyBigWig-0.3.22.tar.gz", hash = "sha256:5d4426f754bd7b7f6dc21d6c3f93b58a96a65b6eb2e578ae03b31a71272d2243", size = 73864 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/61/18c83ee35675f6ba26b1690347c7e9e378e0ad00a95f8b1c5fba9b867af0/pyBigWig-0.3.22-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5b653a085d829d02154a68c438df2b5f2b0e560f06dab55cd191e7b3ca7982f2", size = 196392 },
+    { url = "https://files.pythonhosted.org/packages/eb/6b/5524bb20b2c3f4914b0b4d2d5f255a844b4df4ba6853079ca30402f70c38/pyBigWig-0.3.22-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:85d740f7e9148d21c1150c0c822600751573a62ccc7ea037495e915434ebefa7", size = 217164 },
+]
+
+[[package]]
+name = "pybigwig"
+version = "0.3.24"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.9'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d4/3b/c95c24acc022957b0fad73ce9b6431fe3ddf164b6dd742d5b7b03f806457/pybigwig-0.3.24.tar.gz", hash = "sha256:bf0b6a025a77a1d34c9dc8f134f661780407ffea9c53d18f785e5f1e95b4983f", size = 75247 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/90/9a551aa86956b49e07549d37a81b81de2973939deddca2d9004d20024e6b/pyBigWig-0.3.24-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0c414b6d4f2c8c00ece41aad3dbd4d534b1f0ff078647018816b742dc41219b8", size = 182761 },
+]
+
+[[package]]
 name = "pydantic"
 version = "2.10.6"
 source = { registry = "https://pypi.org/simple" }
@@ -2151,7 +2176,10 @@ dependencies = [
     { name = "pyarrow", version = "17.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "pyarrow", version = "19.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "pybedtools" },
+    { name = "pybigwig", version = "0.3.22", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "pybigwig", version = "0.3.24", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "pyfaidx" },
+    { name = "pysam" },
     { name = "python-snappy" },
     { name = "scipy" },
     { name = "tensorflow" },
@@ -2183,7 +2211,9 @@ requires-dist = [
     { name = "protobuf", specifier = "<=3.20" },
     { name = "pyarrow", specifier = ">=17.0.0" },
     { name = "pybedtools", specifier = "==0.10.0" },
+    { name = "pybigwig", specifier = ">=0.3.22" },
     { name = "pyfaidx", specifier = "==0.6.1" },
+    { name = "pysam", specifier = ">=0.22.1" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "python-snappy", specifier = ">=0.7.3" },
     { name = "scipy", specifier = "==1.10.1" },
