@@ -1,0 +1,36 @@
+# USAGE:
+# docker build -t varscore-server -f Dockerfile.server .
+# docker run --rm -p 8001:8001 varscore-server
+#
+# This Dockerfile is specifically for running the varscore service server
+# ------------------------------------------------
+
+# Use the official Python image as the base
+FROM kundajelab/chrombpnet:latest
+
+RUN apt update \
+    && apt install -y --no-install-recommends \
+        build-essential \
+        libpq-dev \
+        curl \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory
+WORKDIR /code
+
+# Copy the requirements files
+COPY pyproject.toml .
+
+# Copy the application files
+COPY . .
+
+# Install dependencies
+RUN pip install uv
+RUN uv sync
+
+# Expose the port the server runs on
+EXPOSE 8001
+
+# Run the varscore service server
+CMD ["uv", "run", "python", "-m", "varscore.service.server"] 
