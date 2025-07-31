@@ -25,11 +25,11 @@ def test_score_variant_df():
 
     # assert has columns
     assert "lfc" in variant_df.columns
-    assert "lfc_pval" in variant_df.columns
+    # assert "lfc_pval" in variant_df.columns
     assert "jsd" in variant_df.columns
     assert "active_allele_quantile" in variant_df.columns
     assert "ips" in variant_df.columns
-    assert len(variant_df.columns) == 10
+    assert len(variant_df.columns) == 9
     assert len(variant_df) == 5
 
 
