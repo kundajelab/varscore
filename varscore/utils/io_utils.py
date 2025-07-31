@@ -28,14 +28,17 @@ def get_peak_seqs(
     return onehot
 
 
-NARROWPEAK_SCHEMA = ["chr", "start", "end", "4", "5", "6", "7", "8", "9", "summit"]
+NARROWPEAK_SCHEMA = ["chr", "start", "end", "4", "5", "6", "7", "8", "9", "summit_offset"]
 
 
 def load_peaks(peaks_loc: str, width: int = 2114) -> pd.DataFrame:
     """Load a peaks DataFrame, add window start/stop columns."""
     peaks_df = pd.read_csv(peaks_loc, sep="\t", names=NARROWPEAK_SCHEMA)
+    # if summit column is not present in shorter bed files, calculate it as half the length of the peak
+    if pd.isna(peaks_df["summit_offset"]).all():
+        peaks_df["summit_offset"] = (peaks_df["end"] - peaks_df["start"]) // 2
     flank_size = width // 2
-    peaks_df["summit_pos"] = peaks_df["start"] + peaks_df["summit"]
+    peaks_df["summit_pos"] = peaks_df["start"] + peaks_df["summit_offset"]
     peaks_df["window_start"] = peaks_df["summit_pos"] - flank_size
     peaks_df["window_end"] = peaks_df["summit_pos"] + flank_size
     return peaks_df
