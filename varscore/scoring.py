@@ -6,6 +6,7 @@ from scipy.special import softmax
 
 import argparse
 import os
+import pyfaidx
 
 import varscore.utils.chrombpnet_utils as chrombpnet_utils
 import varscore.utils.io_utils as io_utils
@@ -22,6 +23,7 @@ def score_variants(
     genome_loc: str,
     peaks_dist_loc: str,
     out_path: str,
+    batch_size: int = 250000,
 ) -> None:
     """Score variants through a model.
 
@@ -35,34 +37,60 @@ def score_variants(
         genome_loc: The path to the model's genome fasta.
         peaks_dist_loc: The path to the model's peak distribution.
         out_path: The path to save the scores dataframe.
+        batch_size: Number of variants to process at once to manage memory.
     """
-    # Get reference and alternate sequences
-    variant_df = io_utils.load_variants(variants_loc)
-    ref_seqs, alt_seqs = io_utils.get_variant_seqs(variant_df, genome_loc)
-
-    # Load model
+    # Load model and peak distribution once
     model = chrombpnet_utils.load_chrombpnet(model_loc)
-
-    # Load peak distribution
     peaks_dist = np.load(peaks_dist_loc)
-
-    # Make predictions
-    ref_pred_logits, ref_pred_logcts = chrombpnet_utils.predict(model, ref_seqs)
-    alt_pred_logits, alt_pred_logcts = chrombpnet_utils.predict(model, alt_seqs)
-
-    # Score variants
-    _score_variant_df(
-        variant_df,
-        ref_pred_logits,
-        alt_pred_logits,
-        ref_pred_logcts,
-        alt_pred_logcts,
-        peaks_dist,
-    )
-
-    # Save
+    
+    # Load full variant dataframe
+    variant_df = io_utils.load_variants(variants_loc)
+    total_variants = len(variant_df)
+    
+    # Create output directory
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    variant_df.to_csv(out_path, sep="\t", index=False)
+    
+    # Open genome file once for all batches
+    genome = pyfaidx.Fasta(genome_loc)
+    
+    # Process and write in batches
+    first_batch = True
+    for start_idx in range(0, total_variants, batch_size):
+        end_idx = min(start_idx + batch_size, total_variants)
+        batch_df = variant_df.iloc[start_idx:end_idx].copy()
+        
+        # Get sequences for this batch (pass genome handle)
+        ref_seqs, alt_seqs = io_utils.get_variant_seqs_with_genome(batch_df, genome)
+        
+        # Make predictions for this batch
+        ref_pred_logits, ref_pred_logcts = chrombpnet_utils.predict(model, ref_seqs)
+        alt_pred_logits, alt_pred_logcts = chrombpnet_utils.predict(model, alt_seqs)
+        
+        # Score this batch
+        _score_variant_df(
+            batch_df,
+            ref_pred_logits,
+            alt_pred_logits,
+            ref_pred_logcts,
+            alt_pred_logcts,
+            peaks_dist,
+        )
+        
+        # Write batch to file (append mode after first batch)
+        mode = 'w' if first_batch else 'a'
+        header = True if first_batch else False
+        batch_df.to_csv(out_path, sep="\t", index=False, mode=mode, header=header)
+        first_batch = False
+        
+        # Print progress
+        print(f"Processed {end_idx}/{total_variants} variants")
+        
+        # Explicitly delete large arrays to free memory
+        del ref_seqs, alt_seqs, ref_pred_logits, alt_pred_logits
+        del ref_pred_logcts, alt_pred_logcts, batch_df
+    
+    # Close genome file
+    genome.close()
 
 
 def _score_variant_df(
@@ -155,6 +183,7 @@ def main():
         args.genome_loc,
         args.peaks_dist_loc,
         args.out_path,
+        args.batch_size,
     )
 
 
@@ -179,6 +208,10 @@ def _parse_args():
     )
     parser.add_argument(
         "-o", "--out_path", required=True, help="Location to save the results."
+    )
+    parser.add_argument(
+        "-b", "--batch_size", type=int, default=250000,
+        help="Number of variants to process at once (default: 250000)."
     )
     return parser.parse_args()
 

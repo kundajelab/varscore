@@ -47,33 +47,41 @@ def load_peaks(peaks_loc: str, width: int = 2114) -> pd.DataFrame:
 def get_variant_seqs(
     variants_df: pd.DataFrame, genome_loc: str, width: int = 2114
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Get one-hot encoded ref/alot sequences from variants."""
-    # Load sequences
+    """Get one-hot encoded ref/alt sequences from variants."""
+    with pyfaidx.Fasta(genome_loc) as genome:
+        return get_variant_seqs_with_genome(variants_df, genome, width)
+
+
+def get_variant_seqs_with_genome(
+    variants_df: pd.DataFrame, genome: pyfaidx.Fasta, width: int = 2114
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Get one-hot encoded ref/alt sequences from variants using pre-opened genome."""
     ref_sequences = []
     alt_sequences = []
-    with pyfaidx.Fasta(genome_loc) as genome:
-        for _, row in variants_df.iterrows():
-            chro, pos, ref, alt = (
-                row["chr"],
-                int(row["pos"]) - 1,
-                row["ref"],
-                row["alt"],
+    
+    for _, row in variants_df.iterrows():
+        chro, pos, ref, alt = (
+            row["chr"],
+            int(row["pos"]) - 1,
+            row["ref"],
+            row["alt"],
+        )
+        ref_seq = str(genome[chro][pos - width // 2 : pos + width // 2])
+        assert ref_seq[width // 2 : width // 2 + len(ref)] == ref
+        alt_seq = (
+            ref_seq[: width // 2]
+            + alt
+            + str(
+                genome[chro][
+                    pos + len(ref) : pos + width // 2 + len(ref) - len(alt)
+                ]
             )
-            ref_seq = str(genome[chro][pos - width // 2 : pos + width // 2])
-            assert ref_seq[width // 2 : width // 2 + len(ref)] == ref
-            alt_seq = (
-                ref_seq[: width // 2]
-                + alt
-                + str(
-                    genome[chro][
-                        pos + len(ref) : pos + width // 2 + len(ref) - len(alt)
-                    ]
-                )
-            )
-            assert len(alt_seq) == width
-            assert alt_seq[width // 2 : width // 2 + len(alt)] == alt
-            ref_sequences.append(ref_seq)
-            alt_sequences.append(alt_seq)
+        )
+        assert len(alt_seq) == width
+        assert alt_seq[width // 2 : width // 2 + len(alt)] == alt
+        ref_sequences.append(ref_seq)
+        alt_sequences.append(alt_seq)
+    
     # Convert to one-hot encoding
     ref_onehot = chrombpnet_utils.dna_to_one_hot(ref_sequences)
     alt_onehot = chrombpnet_utils.dna_to_one_hot(alt_sequences)

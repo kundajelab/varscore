@@ -16,3 +16,10 @@ Dockerfile
 .venv
 *.pyc
 **/*egg-info/
+varscore/data/cadd/
+varscore/data/raw/
+**/*.parquet
+**/*.tsv.gz
+**/*.bw
+**/*.tar.gz
+ENCFF*

@@ -21,8 +21,11 @@ RUN apt update \
 # Set the working directory
 WORKDIR /code
 
-# Copy the requirements files
+# Copy the requirements files  
 COPY pyproject.toml .
+
+# Create a minimal package structure just for dependency installation
+RUN mkdir varscore && touch varscore/__init__.py
 
 # Install dependencies
 RUN pip install .
