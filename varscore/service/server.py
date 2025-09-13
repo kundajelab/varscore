@@ -2,6 +2,7 @@ from typing import List
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import os
 import uvicorn
 import pandas as pd
 from varscore.prioritization import prioritize_variants
@@ -47,4 +48,5 @@ async def predict(input_data: List[dict]) -> List[dict]:
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    port = int(os.environ.get("PORT", 8001))
+    uvicorn.run(app, host="0.0.0.0", port=port)
