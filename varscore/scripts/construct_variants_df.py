@@ -4,8 +4,6 @@ import pandas as pd
 import pyarrow.parquet as pq
 import os
 
-path = "/users/riyasinh/projects/varscore/varscore/data/variants/part-00000-0f45d468-9e7e-4ffd-bee5-c02e08d0fd43-c000.snappy.parquet"
-
 def flatten_allele_frequencies(lst):
     """
     Given a list of dictionaries (each with keys 'populationName' and 'alleleFrequency'),

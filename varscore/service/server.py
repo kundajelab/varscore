@@ -8,7 +8,7 @@ from varscore.prioritization import prioritize_variants
 from varscore.annotations import (
     VariantAnnotationInput,
     AnnotatedVariant,
-    annotate_variant,
+    annotate_variants,
 )
 
 ALLOWED_ORIGINS = [
@@ -36,8 +36,8 @@ async def root():
 
 
 @app.post("/annotate")
-async def annotate(input: VariantAnnotationInput) -> AnnotatedVariant:
-    return annotate_variant(input)
+async def annotate(input: List[VariantAnnotationInput]) -> List[AnnotatedVariant]:
+    return annotate_variants(input)
 
 
 @app.post("/prioritize/")

@@ -1,7 +1,7 @@
 import pandas as pd
 from pydantic import BaseModel
 
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import varscore.utils.region_utils as region_utils
 import varscore.utils.variant_utils as variant_utils
@@ -27,8 +27,7 @@ class AnnotatedVariant(BaseModel):
     variant_length: int
     variant_type: str
     region_type: str
-    nearest_genes: List[Tuple[str, str, int, str]]
-    """(gene_name, gene_id, distance, type)"""
+    nearest_genes: List[region_utils.GeneAnnotation]
     gene_within_100kb: bool
     ccre_id: Optional[str]
     ccre_group: Optional[str]
@@ -43,6 +42,10 @@ class AnnotatedVariant(BaseModel):
     af_nfe: float
     af_sas: float
     af_remaining: float
+    
+def annotate_variants(variants: List[VariantAnnotationInput]) -> List[AnnotatedVariant]:
+    """Takes in a list of Variants and returns a list of AnnotatedVariants."""
+    return [annotate_variant(variant) for variant in variants]
 
 def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
     """Takes in a Variant and returns an AnnotatedVariant."""

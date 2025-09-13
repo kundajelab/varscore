@@ -1,3 +1,4 @@
+from typing import List, Tuple
 from intervaltree import IntervalTree
 import numpy as np
 import pandas as pd
@@ -67,18 +68,24 @@ class DNATree:
 ###############
 # REGION TYPE #
 ###############
+print("Loading Promoter DNATree ...")
 PROMOTER_DNATREE = loadDNATree(
     os.path.join(
         os.path.dirname(__file__), "..", "data", "promoters_proteincoding.dnatree"
     )
 )
+
+print("Loading Gene DNATree ...")
 GENE_DNATREE = loadDNATree(
     os.path.join(os.path.dirname(__file__), "..", "data", "genes_proteincoding.dnatree")
 )
+
+print("Loading Exon DNATree ...")
 EXON_DNATREE = loadDNATree(
     os.path.join(os.path.dirname(__file__), "..", "data", "exons_proteincoding.dnatree")
 )
 
+print("Loading CCRE DNATree ...")
 CCRE_FILEPATH = os.path.join(os.path.dirname(__file__), "..", "data", "ccres.dnatree")
 if not os.path.exists(CCRE_FILEPATH):
     raise FileNotFoundError(f"CCRE DNATree file not found. Please see the README for instructions on how to construct the DNATree.")
@@ -102,12 +109,17 @@ def __load_genes_by_chro():
     gene_df = gene_df[gene_df["gene_type"] == "protein_coding"]
     return {chro: gene_df[gene_df["chro"] == chro] for chro in set(gene_df["chro"])}
 
-
+print("Loading gene df ...")
 GENE_DF_LOC = os.path.join(os.path.dirname(__file__), "..", "data", "gene_df.tsv")
 GENES_BY_CHRO = __load_genes_by_chro()
 
+class GeneAnnotation(BaseModel):
+    gene_name: str
+    gene_id: str
+    distance: int
+    type: str
 
-def nearest_genes(chro, pos, num_genes=5):
+def nearest_genes(chro, pos, num_genes=5) -> Tuple[List[GeneAnnotation], bool]:
     genes_chro = GENES_BY_CHRO[chro].copy()
     strand_sign = 1 * (genes_chro["strand"] == "+") - 1 * (genes_chro["strand"] == "-")
 
@@ -123,12 +135,12 @@ def nearest_genes(chro, pos, num_genes=5):
     genes_chro = genes_chro.reset_index(drop=True)
 
     nearest_genes = [
-        [
-            genes_chro.loc[i, "gene"],
-            genes_chro.loc[i, "gene_id"],
-            genes_chro.loc[i, "signed_dist"],
-            genes_chro.loc[i, "gene_type"],
-        ]
+        GeneAnnotation(
+            gene_name=genes_chro.loc[i, "gene"],
+            gene_id=genes_chro.loc[i, "gene_id"],
+            distance=genes_chro.loc[i, "signed_dist"],
+            type=genes_chro.loc[i, "gene_type"],
+        )
         for i in range(num_genes)
     ]
     gene_within_100kb = genes_chro.loc[0, "dist"] <= 100000

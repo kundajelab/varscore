@@ -8,6 +8,7 @@ VARIANTS_DF_PATH = "./varscore/data/variants.pkl.gz"
 if not os.path.exists(VARIANTS_DF_PATH):
     raise FileNotFoundError(f"Variants dataframe path not found. You need to generate this file first. Please refer to documentation for instructions.")
 
+print("Loading variants dataframe ...")
 with gzip.open(VARIANTS_DF_PATH, "rb") as f:
     OT_VARIANTS_DF = pickle.load(f)
 
