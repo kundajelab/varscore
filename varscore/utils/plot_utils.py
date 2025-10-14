@@ -8,6 +8,11 @@ import pandas as pd
 
 from typing import Any, Dict, List
 
+from varscore.utils.logging_config import get_logger
+
+# Set up logger for this module
+logger = get_logger(__name__)
+
 
 ######################
 # PLOTTING UTILITIES #
@@ -210,12 +215,9 @@ def _plot_shap(
         allele2_plotted_hits = []
         for hit in allele1_hits:
             if hit["start"] >= (C - F) and hit["end"] < (C + F + allele1_length):
-                print(
-                    hit["start"],
-                    hit["end"],
-                    hit["motif_name"],
-                    hit["start"] - C,
-                    hit["end"] - C,
+                logger.debug(
+                    f"Motif hit: {hit['motif_name']} at {hit['start']}-{hit['end']} "
+                    f"(relative: {hit['start'] - C}-{hit['end'] - C})"
                 )
                 allele1_plotted_hits.append(
                     (hit["start"] - C, hit["end"] - C, hit["motif_name"])
@@ -240,14 +242,9 @@ def _plot_shap(
                         else 0
                     )
                 )  # Forward over allele gap
-                print(
-                    hit["start"],
-                    hit["end"],
-                    hit_start,
-                    hit_end,
-                    hit["motif_name"],
-                    hit["start"] - C,
-                    hit["end"] - C,
+                logger.debug(
+                    f"Motif hit: {hit['motif_name']} at {hit['start']}-{hit['end']} "
+                    f"(adjusted: {hit_start}-{hit_end}, relative: {hit['start'] - C}-{hit['end'] - C})"
                 )
                 allele2_plotted_hits.append((hit_start, hit_end, hit["motif_name"]))
 
@@ -261,13 +258,13 @@ def _plot_shap(
         allele2_plotted_hits = []
         for hit in allele1_hits:
             if hit["start"] >= (C - F) and hit["end"] < (C + F + allele1_length):
-                # print(hit["start"], hit["end"], hit["motif_name"], hit["start"] - C, hit["end"] - C)
+                # logger.debug(f"Motif hit: {hit['motif_name']} at {hit['start']}-{hit['end']} (relative: {hit['start'] - C}-{hit['end'] - C})")
                 allele1_plotted_hits.append(
                     (hit["start"] - C, hit["end"] - C, hit["motif_name"])
                 )
         for hit in allele2_hits:
             if hit["start"] >= (C - F) and hit["end"] < (C + F + allele2_length):
-                # print(hit["start"], hit["end"], hit["motif_name"], hit["start"] - C, hit["end"] - C)
+                # logger.debug(f"Motif hit: {hit['motif_name']} at {hit['start']}-{hit['end']} (relative: {hit['start'] - C}-{hit['end'] - C})")
                 allele2_plotted_hits.append(
                     (hit["start"] - C, hit["end"] - C, hit["motif_name"])
                 )

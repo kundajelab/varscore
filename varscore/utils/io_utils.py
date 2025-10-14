@@ -5,6 +5,10 @@ import pyfaidx
 from typing import Tuple
 
 import varscore.utils.chrombpnet_utils as chrombpnet_utils
+from varscore.utils.logging_config import get_logger
+
+# Set up logger for this module
+logger = get_logger(__name__)
 
 
 def get_peak_seqs(
@@ -67,7 +71,10 @@ def get_variant_seqs_with_genome(
             row["alt"],
         )
         ref_seq = str(genome[chro][pos - width // 2 : pos + width // 2])
-        assert ref_seq[width // 2 : width // 2 + len(ref)] == ref
+        if ref_seq[width // 2 : width // 2 + len(ref)] != ref:
+            error_msg = f"Failed to get ref sequence for provided variant {chro}:{pos}:{ref}:{alt} : ref_seq from genome: {ref_seq}, provided ref: {ref}"
+            logger.error(error_msg)
+            raise AssertionError(error_msg)
         alt_seq = (
             ref_seq[: width // 2]
             + alt
@@ -77,8 +84,14 @@ def get_variant_seqs_with_genome(
                 ]
             )
         )
-        assert len(alt_seq) == width
-        assert alt_seq[width // 2 : width // 2 + len(alt)] == alt
+        if len(alt_seq) != width:
+            error_msg = f"Alt sequence length mismatch for provided variant {chro}:{pos}:{ref}:{alt} : alt_seq from genome: {alt_seq}, provided alt: {alt} with width: {width}"
+            logger.error(error_msg)
+            raise AssertionError(error_msg)
+        if alt_seq[width // 2 : width // 2 + len(alt)] != alt:
+            error_msg = f"Failed to get alt sequence for provided variant {chro}:{pos}:{ref}:{alt} : alt_seq from genome: {alt_seq}, provided alt: {alt}"
+            logger.error(error_msg)
+            raise AssertionError(error_msg)
         ref_sequences.append(ref_seq)
         alt_sequences.append(alt_seq)
     

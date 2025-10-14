@@ -1,9 +1,13 @@
 
-
 import pysam
 from enum import Enum
 import os
 import pyBigWig
+
+from varscore.utils.logging_config import get_logger
+
+# Set up logger for this module
+logger = get_logger(__name__)
 
 SNV_FILEPATH = "varscore/data/cadd/whole_genome_SNVs.tsv.gz"
 INDEL_FILEPATH = "varscore/data/cadd/gnomad.genomes.r4.0.indel.tsv.gz"
@@ -44,7 +48,9 @@ def get_cadd_score(chrom: str, pos: int, ref: str, alt: str) -> tuple[float, flo
     score_file, index_file = MUTATION_TYPE_FILE_MAP[mutation_type]["score_file"], MUTATION_TYPE_FILE_MAP[mutation_type]["index_file"]
     
     if not os.path.exists(score_file) or not os.path.exists(index_file):
-        raise FileNotFoundError(f"CADD score file or index file not found. Please see the README for instructions on how to download the file.")
+        error_msg = f"CADD score file or index file not found. Please see the README for instructions on how to download the file."
+        logger.error(error_msg)
+        raise FileNotFoundError(error_msg)
     
     # Standardize chromosome format if needed (here we assume the file uses no "chr" prefix)
     if chrom.startswith("chr"):
@@ -73,7 +79,9 @@ def phylop_score(chr, start, end) -> list[list[float]]:
     Calculates the phylop score for a given region.
     """
     if not os.path.exists(PHYLOP_VERTEBRATES_FILEPATH) or not os.path.exists(PHYLOP_PRIMATES_FILEPATH):
-        raise FileNotFoundError(f"PhyloP Bigwig files not found. Please see the README for instructions on how to download the file.")
+        error_msg = f"PhyloP Bigwig files not found. Please see the README for instructions on how to download the file."
+        logger.error(error_msg)
+        raise FileNotFoundError(error_msg)
     with open(PHYLOP_VERTEBRATES_FILEPATH, "rb") as f:
         phylop_vertebrates = pyBigWig.open(PHYLOP_VERTEBRATES_FILEPATH)
         score_vertebrates = phylop_vertebrates.values(chr, start, end)

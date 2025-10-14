@@ -7,6 +7,10 @@ import os
 import varscore.utils.chrombpnet_utils as chrombpnet_utils
 import varscore.utils.io_utils as io_utils
 import varscore.utils.region_utils as region_utils
+from varscore.utils.logging_config import get_logger
+
+# Set up logger for this module
+logger = get_logger(__name__)
 
 
 ##################
@@ -95,7 +99,9 @@ def _get_peaks_distribution(model: tf.keras.Model, peak_seqs: np.ndarray) -> np.
     """Computes a 1000-dimensional distribution of peak logcounts from a model."""
     N = peak_seqs.shape[0]
     if N < 1000:
-        raise ValueError("The number of peaks must be greater than 1000.")
+        error_msg = "The number of peaks must be greater than 1000."
+        logger.error(error_msg)
+        raise ValueError(error_msg)
     # Forward pass on sequences
     _, peak_logcts = chrombpnet_utils.predict(model, peak_seqs)
     # Peak distribuion
