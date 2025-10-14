@@ -7,9 +7,19 @@ from scipy.special import softmax
 import argparse
 import os
 import pyfaidx
+import logging
+from datetime import datetime
 
 import varscore.utils.chrombpnet_utils as chrombpnet_utils
 import varscore.utils.io_utils as io_utils
+from varscore.utils.logging_config import get_logger, log_timing, log_progress, setup_logging
+
+# Set up logger for this module
+# Initialize logging if not already configured
+if not logging.getLogger().hasHandlers():
+    setup_logging(level="INFO")
+
+logger = get_logger(__name__)
 
 
 ##################
@@ -39,34 +49,57 @@ def score_variants(
         out_path: The path to save the scores dataframe.
         batch_size: Number of variants to process at once to manage memory.
     """
+    start_time = datetime.now()
+    logger.info("Starting variant scoring")
+    logger.info(f"Model: {model_loc}")
+    logger.info(f"Variants file: {variants_loc}")
+    logger.info(f"Genome file: {genome_loc}")
+    logger.info(f"Peaks distribution: {peaks_dist_loc}")
+    logger.info(f"Output path: {out_path}")
+    logger.info(f"Batch size: {batch_size}")
+    
     # Load model and peak distribution once
+    logger.info("Loading model...")
     model = chrombpnet_utils.load_chrombpnet(model_loc)
+    logger.info("Model loaded successfully")
+    
+    logger.info("Loading peak distribution...")
     peaks_dist = np.load(peaks_dist_loc)
+    logger.info(f"Peak distribution loaded: {len(peaks_dist)} values")
     
     # Load full variant dataframe
+    logger.info("Loading variants...")
     variant_df = io_utils.load_variants(variants_loc)
     total_variants = len(variant_df)
+    logger.info(f"Loaded {total_variants} variants")
     
     # Create output directory
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    logger.info(f"Output directory created")
     
     # Open genome file once for all batches
+    logger.info("Opening genome file...")
     genome = pyfaidx.Fasta(genome_loc)
     
     # Process and write in batches
+    logger.info(f"Processing variants in batches of {batch_size}...")
     first_batch = True
     for start_idx in range(0, total_variants, batch_size):
+        batch_start = datetime.now()
         end_idx = min(start_idx + batch_size, total_variants)
         batch_df = variant_df.iloc[start_idx:end_idx].copy()
         
         # Get sequences for this batch (pass genome handle)
+        logger.info(f"Batch {start_idx}-{end_idx}: Getting sequences...")
         ref_seqs, alt_seqs = io_utils.get_variant_seqs_with_genome(batch_df, genome)
         
         # Make predictions for this batch
+        logger.info(f"Batch {start_idx}-{end_idx}: Making predictions...")
         ref_pred_logits, ref_pred_logcts = chrombpnet_utils.predict(model, ref_seqs)
         alt_pred_logits, alt_pred_logcts = chrombpnet_utils.predict(model, alt_seqs)
         
         # Score this batch
+        logger.info(f"Batch {start_idx}-{end_idx}: Computing scores...")
         _score_variant_df(
             batch_df,
             ref_pred_logits,
@@ -77,13 +110,16 @@ def score_variants(
         )
         
         # Write batch to file (append mode after first batch)
+        logger.info(f"Batch {start_idx}-{end_idx}: Writing to file...")
         mode = 'w' if first_batch else 'a'
         header = True if first_batch else False
         batch_df.to_csv(out_path, sep="\t", index=False, mode=mode, header=header)
         first_batch = False
         
-        # Print progress
-        print(f"Processed {end_idx}/{total_variants} variants")
+        # Log progress
+        batch_duration = (datetime.now() - batch_start).total_seconds()
+        logger.info(f"Batch {start_idx}-{end_idx} completed in {batch_duration:.2f}s")
+        log_progress(logger, end_idx, total_variants, "Scoring")
         
         # Explicitly delete large arrays to free memory
         del ref_seqs, alt_seqs, ref_pred_logits, alt_pred_logits
@@ -91,6 +127,11 @@ def score_variants(
     
     # Close genome file
     genome.close()
+    logger.info("Genome file closed")
+    logger.info(f"Results saved to {out_path}")
+    
+    # Log timing
+    log_timing(logger, "Variant scoring", start_time)
 
 
 def _score_variant_df(
