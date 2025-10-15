@@ -34,6 +34,7 @@ def score_variants(
     peaks_dist_loc: str,
     out_path: str,
     batch_size: int = 250000,
+    reuse_output: bool = True,
 ) -> None:
     """Score variants through a model.
 
@@ -48,6 +49,7 @@ def score_variants(
         peaks_dist_loc: The path to the model's peak distribution.
         out_path: The path to save the scores dataframe.
         batch_size: Number of variants to process at once to manage memory.
+        reuse_output: If True, attempt to reuse existing output and skip already scored variants.
     """
     start_time = datetime.now()
     logger.info("Starting variant scoring")
@@ -57,6 +59,7 @@ def score_variants(
     logger.info(f"Peaks distribution: {peaks_dist_loc}")
     logger.info(f"Output path: {out_path}")
     logger.info(f"Batch size: {batch_size}")
+    logger.info(f"Reuse output: {reuse_output}")
     
     # Load model and peak distribution once
     logger.info("Loading model...")
@@ -77,13 +80,72 @@ def score_variants(
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     logger.info(f"Output directory created")
     
+    # Try to reuse existing output if requested
+    existing_scores_df = None
+    if reuse_output and os.path.exists(out_path):
+        try:
+            logger.info(f"Output file exists. Attempting to load existing scores from {out_path}")
+            existing_scores_df = pd.read_csv(out_path, sep="\t")
+            logger.info(f"Loaded {len(existing_scores_df)} existing scored variants")
+            
+            # Create a variant key for matching (chr:pos:ref:alt)
+            variant_df['_variant_key'] = (
+                variant_df['chr'].astype(str) + ':' + 
+                variant_df['pos'].astype(str) + ':' + 
+                variant_df['ref'].astype(str) + ':' + 
+                variant_df['alt'].astype(str)
+            )
+            existing_scores_df['_variant_key'] = (
+                existing_scores_df['chr'].astype(str) + ':' + 
+                existing_scores_df['pos'].astype(str) + ':' + 
+                existing_scores_df['ref'].astype(str) + ':' + 
+                existing_scores_df['alt'].astype(str)
+            )
+            
+            # Find variants that haven't been scored yet
+            already_scored_keys = set(existing_scores_df['_variant_key'])
+            variant_df['_already_scored'] = variant_df['_variant_key'].isin(already_scored_keys)
+            variants_to_score = variant_df[~variant_df['_already_scored']].copy()
+            variants_to_score = variants_to_score.drop(columns=['_variant_key', '_already_scored'])
+            
+            num_already_scored = len(variant_df) - len(variants_to_score)
+            logger.info(f"Found {num_already_scored} already scored variants")
+            logger.info(f"Need to score {len(variants_to_score)} remaining variants")
+            
+            # Update variant_df to only include variants that need scoring
+            variant_df = variants_to_score
+            
+            # Clean up temporary column from existing scores
+            existing_scores_df = existing_scores_df.drop(columns=['_variant_key'])
+            
+        except Exception as e:
+            logger.warning(f"Failed to load existing scores: {e}")
+            logger.warning("Will score all variants from scratch")
+            existing_scores_df = None
+            # Clean up any temporary columns
+            if '_variant_key' in variant_df.columns:
+                variant_df = variant_df.drop(columns=['_variant_key'])
+            if '_already_scored' in variant_df.columns:
+                variant_df = variant_df.drop(columns=['_already_scored'])
+    
+    # Update total_variants to reflect the number we actually need to score
+    total_variants = len(variant_df)
+    
+    if total_variants == 0:
+        logger.info("All variants have already been scored! Nothing to do.")
+        log_timing(logger, "Variant scoring", start_time)
+        return
+    
     # Open genome file once for all batches
     logger.info("Opening genome file...")
     genome = pyfaidx.Fasta(genome_loc)
     
     # Process and write in batches
     logger.info(f"Processing variants in batches of {batch_size}...")
-    first_batch = True
+    # If we have existing scores, we'll append to the existing file
+    # Otherwise, we'll create a new file
+    first_batch = existing_scores_df is None
+    
     for start_idx in range(0, total_variants, batch_size):
         batch_start = datetime.now()
         end_idx = min(start_idx + batch_size, total_variants)
@@ -225,6 +287,7 @@ def main():
         args.peaks_dist_loc,
         args.out_path,
         args.batch_size,
+        args.reuse_output,
     )
 
 
@@ -254,6 +317,11 @@ def _parse_args():
         "-b", "--batch_size", type=int, default=250000,
         help="Number of variants to process at once (default: 250000)."
     )
+    parser.add_argument(
+        "--no-reuse-output", dest="reuse_output", action="store_false",
+        help="Disable reusing existing output (default: reuse is enabled)."
+    )
+    parser.set_defaults(reuse_output=True)
     return parser.parse_args()
 
 
