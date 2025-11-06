@@ -45,7 +45,7 @@ def average_interpretations(
     alt_profile = alt_exp_logits / np.sum(alt_exp_logits, axis=1, keepdims=True)
     alt_counts_profile = np.exp(alt_avg_logcts) * alt_profile
     # Flatten shaps
-    ACGT = ['A', 'C', 'G', 'T']
+    ACGT = ["A", "C", "G", "T"]
     ref_shap_contributions = np.sum(ref_avg_shaps, axis=2).astype(
         np.float16
     )  # (N, L, 4) -> (N, L)
@@ -54,7 +54,7 @@ def average_interpretations(
     )  # Transpose so (N, L, 4) -> (N, 4, L)
     ref_shap_sequences = []
     for i in range(ref_shap_onehot.shape[0]):
-        seq_idx = np.argmax(ref_shap_onehot[i], axis=0) # (L, )
+        seq_idx = np.argmax(ref_shap_onehot[i], axis=0)  # (L, )
         seq = ""
         for idx in seq_idx:
             seq += ACGT[idx]
@@ -67,7 +67,7 @@ def average_interpretations(
     )  # Transpose so (N, L, 4) -> (N, 4, L)
     alt_shap_sequences = []
     for i in range(alt_shap_onehot.shape[0]):
-        seq_idx = np.argmax(alt_shap_onehot[i], axis=0) # (L, )
+        seq_idx = np.argmax(alt_shap_onehot[i], axis=0)  # (L, )
         seq = ""
         for idx in seq_idx:
             seq += ACGT[idx]
@@ -75,7 +75,10 @@ def average_interpretations(
     # Save
     os.makedirs(out_dir, exist_ok=True)
     np.save(os.path.join(out_dir, "average_ref_profiles.npy"), ref_counts_profile)
-    np.save(os.path.join(out_dir, "average_ref_shap_contributions.npy"), ref_shap_contributions)
+    np.save(
+        os.path.join(out_dir, "average_ref_shap_contributions.npy"),
+        ref_shap_contributions,
+    )
     with open(os.path.join(out_dir, "average_ref_shap_sequences.txt"), "w") as f:
         for seq in ref_shap_sequences:
             f.write(seq + "\n")
@@ -86,7 +89,10 @@ def average_interpretations(
     )
     os.makedirs(out_dir, exist_ok=True)
     np.save(os.path.join(out_dir, "average_alt_profiles.npy"), alt_counts_profile)
-    np.save(os.path.join(out_dir, "average_alt_shap_contributions.npy"), alt_shap_contributions)
+    np.save(
+        os.path.join(out_dir, "average_alt_shap_contributions.npy"),
+        alt_shap_contributions,
+    )
     with open(os.path.join(out_dir, "average_alt_shap_sequences.txt"), "w") as f:
         for seq in alt_shap_sequences:
             f.write(seq + "\n")
