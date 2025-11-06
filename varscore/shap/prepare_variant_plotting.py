@@ -9,7 +9,6 @@ import multiprocessing
 import os
 
 import varscore.utils.io_utils as io_utils
-import varscore.utils.plot_utils as plot_utils
 
 
 #################
