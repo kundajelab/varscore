@@ -44,34 +44,56 @@ def average_interpretations(
     alt_exp_logits = np.exp(alt_avg_logits)
     alt_profile = alt_exp_logits / np.sum(alt_exp_logits, axis=1, keepdims=True)
     alt_counts_profile = np.exp(alt_avg_logcts) * alt_profile
-    # Prepare FiNeMo inputs
-    ref_finemo_sequences = (
+    # Flatten shaps
+    ACGT = ['A', 'C', 'G', 'T']
+    ref_shap_contributions = np.sum(ref_avg_shaps, axis=2).astype(
+        np.float16
+    )  # (N, L, 4) -> (N, L)
+    ref_shap_onehot = (
         (ref_avg_shaps != 0).astype(np.int8).transpose(0, 2, 1)
     )  # Transpose so (N, L, 4) -> (N, 4, L)
-    ref_finemo_contribs = np.sum(ref_avg_shaps, axis=2).astype(
+    ref_shap_sequences = []
+    for i in range(ref_shap_onehot.shape[0]):
+        seq_idx = np.argmax(ref_shap_onehot[i], axis=0) # (L, )
+        seq = ""
+        for idx in seq_idx:
+            seq += ACGT[idx]
+        ref_shap_sequences.append(seq)
+    alt_shap_contributions = np.sum(alt_avg_shaps, axis=2).astype(
         np.float16
     )  # (N, L, 4) -> (N, L)
-    alt_finemo_sequences = (
+    alt_shap_onehot = (
         (alt_avg_shaps != 0).astype(np.int8).transpose(0, 2, 1)
     )  # Transpose so (N, L, 4) -> (N, 4, L)
-    alt_finemo_contribs = np.sum(alt_avg_shaps, axis=2).astype(
-        np.float16
-    )  # (N, L, 4) -> (N, L)
+    alt_shap_sequences = []
+    for i in range(alt_shap_onehot.shape[0]):
+        seq_idx = np.argmax(alt_shap_onehot[i], axis=0) # (L, )
+        seq = ""
+        for idx in seq_idx:
+            seq += ACGT[idx]
+        alt_shap_sequences.append(seq)
     # Save
     os.makedirs(out_dir, exist_ok=True)
     np.save(os.path.join(out_dir, "average_ref_profiles.npy"), ref_counts_profile)
-    np.save(os.path.join(out_dir, "average_ref_shaps.npy"), ref_avg_shaps)
-    np.save(os.path.join(out_dir, "average_alt_profiles.npy"), alt_counts_profile)
-    np.save(os.path.join(out_dir, "average_alt_shaps.npy"), alt_avg_shaps)
+    np.save(os.path.join(out_dir, "average_ref_shap_contributions.npy"), ref_shap_contributions)
+    with open(os.path.join(out_dir, "average_ref_shap_sequences.txt"), "w") as f:
+        for seq in ref_shap_sequences:
+            f.write(seq + "\n")
     np.savez(
         os.path.join(out_dir, "ref_finemo_input.npz"),
-        sequences=ref_finemo_sequences,
-        contributions=ref_finemo_contribs,
+        sequences=ref_shap_onehot,
+        contributions=ref_shap_contributions,
     )
+    os.makedirs(out_dir, exist_ok=True)
+    np.save(os.path.join(out_dir, "average_alt_profiles.npy"), alt_counts_profile)
+    np.save(os.path.join(out_dir, "average_alt_shap_contributions.npy"), alt_shap_contributions)
+    with open(os.path.join(out_dir, "average_alt_shap_sequences.txt"), "w") as f:
+        for seq in alt_shap_sequences:
+            f.write(seq + "\n")
     np.savez(
         os.path.join(out_dir, "alt_finemo_input.npz"),
-        sequences=alt_finemo_sequences,
-        contributions=alt_finemo_contribs,
+        sequences=alt_shap_onehot,
+        contributions=alt_shap_contributions,
     )
 
 

@@ -15,35 +15,46 @@ import varscore.utils.plot_utils as plot_utils
 #################
 # CORE FUNCTION #
 #################
-def plot_variants(
-    variants_loc: str, plotting_data_dir: str, out_path: str, num_cpus: int = 4
+def prepare_variant_plotting(
+    variants_loc: str, plotting_data_dir: str, out_path: str
 ) -> None:
     """Plot variants."""
     variants_df = io_utils.load_variants(variants_loc)
     ref_counts_profile = np.load(
         os.path.join(plotting_data_dir, "average_ref_profiles.npy")
     )
-    ref_shaps = np.load(os.path.join(plotting_data_dir, "average_ref_shaps.npy"))
-    alt_counts_profile = np.load(
-        os.path.join(plotting_data_dir, "average_alt_profiles.npy")
+    ref_shap_contributions = np.load(
+        os.path.join(plotting_data_dir, "average_ref_shap_contributions.npy")
     )
-    alt_shaps = np.load(os.path.join(plotting_data_dir, "average_alt_shaps.npy"))
-    # TODO: generalize / add options for these
+    ref_shap_sequences = []
+    with open(os.path.join(plotting_data_dir, "average_ref_shap_sequences.txt"), "r") as f:
+        for line in f:
+            ref_shap_sequences.append(line.strip())
     ref_hits = pd.read_csv(
         os.path.join(plotting_data_dir, "ref_hits", "hits.tsv"), sep="\t"
     )
+    alt_counts_profile = np.load(
+        os.path.join(plotting_data_dir, "average_alt_profiles.npy")
+    )
+    alt_shap_contributions = np.load(
+        os.path.join(plotting_data_dir, "average_alt_shap_contributions.npy")
+    )
+    alt_shap_sequences = []
+    with open(os.path.join(plotting_data_dir, "average_alt_shap_sequences.txt"), "r") as f:
+        for line in f:
+            alt_shap_sequences.append(line.strip())
     alt_hits = pd.read_csv(
         os.path.join(plotting_data_dir, "alt_hits", "hits.tsv"), sep="\t"
     )
-    # Prepare plotting
-    payloads = []
-    ref_motifs = []  # Track motifs that overlap variants
-    alt_motifs = []  # Track motifs that overlap variants
+    # Turn arrays to strings
+    ref_counts_profile_strs = [np.array2string(row, separator=",") for row in ref_counts_profile]
+    ref_shap_contributions_strs = [np.array2string(row, separator=",") for row in ref_shap_contributions]
+    alt_counts_profile_strs = [np.array2string(row, separator=",") for row in alt_counts_profile]
+    alt_shap_contributions_strs = [np.array2string(row, separator=",") for row in alt_shap_contributions]
+    # Track motifs that overlap variants
+    ref_motifs = []
+    alt_motifs = []
     for index, row in variants_df.iterrows():
-        ref_profile = ref_counts_profile[index]
-        alt_profile = alt_counts_profile[index]
-        ref_shap = ref_shaps[index]
-        alt_shap = alt_shaps[index]
         pos = 2114 // 2
         ref = row["ref"]
         alt = row["alt"]
@@ -102,68 +113,20 @@ def plot_variants(
                     row["motif_name"].split("patterns.")[1].rsplit("_", 1)[0]
                 )
         alt_motifs.append(alt_motifs_i)
-        payloads.append(
-            (
-                ref_profile,
-                alt_profile,
-                ref_shap,
-                alt_shap,
-                ref_hits_i,
-                alt_hits_i,
-                ref_length,
-                alt_length,
-                ref,
-                alt,
-                800,
-            )
-        )
-    # Plot
-    with multiprocessing.Pool(processes=num_cpus) as p:
-        plot_strings = p.starmap(_plot_variant_to_utf8, payloads)
     # Save
-    variants_df["plot"] = plot_strings
+    variants_df["ref_profile"] = ref_counts_profile_strs
+    variants_df["ref_shap_contributions"] = ref_shap_contributions_strs
+    variants_df["ref_shap_sequence"] = ref_shap_sequences
     variants_df["ref_motifs"] = [",".join(motifs) for motifs in ref_motifs]
-    variants_df["alt_motifs"] = [",".join(motifs) for motifs in alt_motifs]
+    variants_df["alt_profile"] = alt_counts_profile_strs
+    variants_df["alt_shap_contributions"] = alt_shap_contributions_strs
+    variants_df["alt_shap_sequence"] = alt_shap_sequences
+    variants_df["alt_motifs"] = [",".join(motifs) for motifs in alt_motifs]    
     variants_df.to_csv(out_path, sep="\t", index=False)
 
 
-def _plot_variant_to_utf8(
-    allele1_pred,
-    allele2_pred,
-    allele1_shap,
-    allele2_shap,
-    allele1_hits,
-    allele2_hits,
-    allele1_length,
-    allele2_length,
-    allele1_label,
-    allele2_label,
-    window_size,
-):
-    fig = plot_utils.variant_plot(
-        allele1_pred,
-        allele2_pred,
-        allele1_shap,
-        allele2_shap,
-        allele1_hits,
-        allele2_hits,
-        allele1_length,
-        allele2_length,
-        allele1_label,
-        allele2_label,
-        window_size,
-    )
-    # Encode image in UTF-8
-    buf = io.BytesIO()
-    fig.savefig(buf, bbox_inches="tight", format="svg")
-    plt.close(fig)
-    buf.seek(0)
-    utf8_plot = base64.b64encode(buf.read()).decode("utf-8")
-    return utf8_plot
-
-
 def parser():
-    parser = argparse.ArgumentParser(description="Plot variants.")
+    parser = argparse.ArgumentParser(description="Prepare variant plotting.")
     parser.add_argument(
         "-v",
         "--variants_loc",
@@ -182,26 +145,18 @@ def parser():
         required=True,
         help="The path to save the TSV with images.",
     )
-    parser.add_argument(
-        "-n",
-        "--num_cpus",
-        default=4,
-        type=int,
-        help="The number of CPUs to use.",
-    )
     return parser
 
 
 if __name__ == "__main__":
     args = parser().parse_args()
-    plot_variants(
-        args.variants_loc, args.plotting_data_dir, args.out_path, args.num_cpus
+    prepare_variant_plotting(
+        args.variants_loc, args.plotting_data_dir, args.out_path
     )
     # print("hi")
-    # plot_variants(
+    # prepare_variant_plotting(
     #     "/users/riyasinh/projects/varscore/plot_dir/variants.csv",
     #     "/users/riyasinh/projects/varscore/plot_dir",
     #     "/users/riyasinh/projects/varscore/plot_dir/variants_with_plots.tsv",
-    #     4,
     # )
     # print("done")
