@@ -75,22 +75,23 @@ def prepare_variant_plotting(
         x[2114 // 2 - 500 : 2114 // 2 + 500] for x in alt_shap_sequences
     ]
     # Track motifs that overlap variants
-    ref_motifs = []
-    alt_motifs = []
+    ref_all_hits = []
+    ref_variant_hits = []
+    alt_all_hits = []
+    alt_variant_hits = []
     for index, row in variants_df.iterrows():
         pos = 2114 // 2
         ref = row["ref"]
         alt = row["alt"]
         ref_length = len(ref)
-        alt_length = len(alt)
         # title = f"{row['chr']}@{row['pos']}:{ref}->{alt}"
         # Ref motif analysis
-        ref_hits_i = []
-        ref_motifs_i = []
+        ref_all_hits_i = []
+        ref_variant_hits_i = []
         for _, row in ref_hits[
             (ref_hits["peak_id"] == index) & (ref_hits["hit_coefficient"] >= 10)
         ].iterrows():
-            ref_hits_i.append(
+            ref_all_hits_i.append(
                 {
                     "start": row["start"],
                     "end": row["end"],
@@ -106,17 +107,18 @@ def prepare_variant_plotting(
                 or ((pos <= row["end"]) and (row["end"] <= pos + ref_length - 1))
                 or ((row["start"] <= pos) and (pos + ref_length - 1 <= row["end"]))
             ):
-                ref_motifs_i.append(
+                ref_variant_hits_i.append(
                     row["motif_name"].split("patterns.")[1].rsplit("_", 1)[0]
                 )
-        ref_motifs.append(ref_motifs_i)
+        ref_all_hits.append(ref_all_hits_i)
+        ref_variant_hits.append(ref_variant_hits_i)
         # Alt motif analysis
-        alt_hits_i = []
-        alt_motifs_i = []
+        alt_all_hits_i = []
+        alt_variant_hits_i = []
         for _, row in alt_hits[
             (alt_hits["peak_id"] == index) & (alt_hits["hit_coefficient"] >= 10)
         ].iterrows():
-            alt_hits_i.append(
+            alt_all_hits_i.append(
                 {
                     "start": row["start"],
                     "end": row["end"],
@@ -130,19 +132,22 @@ def prepare_variant_plotting(
                 or ((pos <= row["end"]) and (row["end"] <= pos + ref_length - 1))
                 or ((row["start"] <= pos) and (pos + ref_length - 1 <= row["end"]))
             ):
-                alt_motifs_i.append(
+                alt_variant_hits_i.append(
                     row["motif_name"].split("patterns.")[1].rsplit("_", 1)[0]
                 )
-        alt_motifs.append(alt_motifs_i)
+        alt_all_hits.append(alt_all_hits_i)
+        alt_variant_hits.append(alt_variant_hits_i)
     # Save
     variants_df["ref_profile"] = ref_counts_profile_strs
     variants_df["ref_shap_contributions"] = ref_shap_contributions_strs
     variants_df["ref_shap_sequence"] = ref_shap_sequences
-    variants_df["ref_motifs"] = [",".join(motifs) for motifs in ref_motifs]
+    variants_df["ref_all_hits"] = ref_all_hits
+    variants_df["ref_motifs"] = [",".join(motifs) for motifs in ref_variant_hits]
     variants_df["alt_profile"] = alt_counts_profile_strs
     variants_df["alt_shap_contributions"] = alt_shap_contributions_strs
     variants_df["alt_shap_sequence"] = alt_shap_sequences
-    variants_df["alt_motifs"] = [",".join(motifs) for motifs in alt_motifs]
+    variants_df["alt_all_hits"] = alt_all_hits
+    variants_df["alt_motifs"] = [",".join(motifs) for motifs in alt_variant_hits]
     variants_df.to_csv(out_path, sep="\t", index=False)
 
 
