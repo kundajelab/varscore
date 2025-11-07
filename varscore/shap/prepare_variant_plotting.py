@@ -59,6 +59,9 @@ def prepare_variant_plotting(
         np.array2string(x[2114 // 2 - 500 : 2114 // 2 + 500], separator=",")
         for x in ref_shap_contributions
     ]
+    ref_shap_sequences = [
+        x[2114 // 2 - 500 : 2114 // 2 + 500] for x in ref_shap_sequences
+    ]
     assert alt_counts_profile.shape[1] == 1000
     assert alt_shap_contributions.shape[1] == 2114
     alt_counts_profile_strs = [
@@ -67,6 +70,9 @@ def prepare_variant_plotting(
     alt_shap_contributions_strs = [
         np.array2string(x[2114 // 2 - 500 : 2114 // 2 + 500], separator=",")
         for x in alt_shap_contributions
+    ]
+    alt_shap_sequences = [
+        x[2114 // 2 - 500 : 2114 // 2 + 500] for x in alt_shap_sequences
     ]
     # Track motifs that overlap variants
     ref_motifs = []
