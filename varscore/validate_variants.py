@@ -58,6 +58,10 @@ def validate_variants(
     logger.info(f"Loaded {total_variants} variants")
     
     # Create output directories if saving variants
+    if not valid_out_path:
+        valid_out_path = variants_loc.replace(".tsv", "_valid.tsv")
+    if not invalid_out_path:
+        invalid_out_path = variants_loc.replace(".tsv", "_invalid.tsv")
     if valid_out_path:
         os.makedirs(os.path.dirname(valid_out_path), exist_ok=True)
         logger.info(f"Valid variants will be saved to: {valid_out_path}")
