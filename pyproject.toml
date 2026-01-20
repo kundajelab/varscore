@@ -29,6 +29,7 @@ dependencies = [
 	"pyarrow>=17.0.0",
 	"pybigwig>=0.3.22",
 	"pysam>=0.22.1",
+	"modal>=0.65.66",
 ]
 keywords = ["variant scoring", "variant effect", "variant prioritization", "variant", "scoring", "effect", "prioritization", "genomics", "chrombpnet"]
 
