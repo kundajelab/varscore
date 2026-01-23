@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import pandas as pd
 import pyfaidx
@@ -19,6 +20,9 @@ class ValidationErrorReason(Enum):
     ALT_LENGTH_MISMATCH = "alt_length_mismatch"
     ALT_MISMATCH = "alt_mismatch"
     GENOME_ACCESS_ERROR = "genome_access_error"
+    INVALID_CHROMOSOME = "invalid_chromosome"
+    INVALID_REFERENCE = "invalid_reference"
+    INVALID_ALTERNATE = "invalid_alternate"
 
 
 @dataclass
@@ -93,6 +97,28 @@ def validate_variant(
         ValidationResult with validation status and error details if invalid
     """
     try:
+        
+        if chro not in genome.keys() or not re.match(r'^chr[1-9XY]*$', chro):
+            return ValidationResult(
+                is_valid=False,
+                error_reason=ValidationErrorReason.INVALID_CHROMOSOME,
+                error_message=f"Chromosome {chro} not found in genome"
+            )
+            
+        if not set(ref).issubset({'A', 'C', 'G', 'T'}):
+            return ValidationResult(
+                is_valid=False,
+                error_reason=ValidationErrorReason.INVALID_REFERENCE,
+                error_message=f"Reference {ref} is not a valid DNA sequence"
+            )
+            
+        if not set(alt).issubset({'A', 'C', 'G', 'T'}):
+            return ValidationResult(
+                is_valid=False,
+                error_reason=ValidationErrorReason.INVALID_ALTERNATE,
+                error_message=f"Alternate {alt} is not a valid DNA sequence"
+            )
+
         ref_seq = str(genome[chro][pos - width // 2 : pos + width // 2])
         
         if ref_seq[width // 2 : width // 2 + len(ref)] != ref:
