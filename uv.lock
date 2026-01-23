@@ -1,5 +1,9 @@
 version = 1
 requires-python = ">=3.8, <3.10"
+resolution-markers = [
+    "python_full_version >= '3.9'",
+    "python_full_version < '3.9'",
+]
 
 [[package]]
 name = "absl-py"
@@ -83,7 +87,7 @@ name = "aiostream"
 version = "0.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions" },
+    { name = "typing-extensions", marker = "python_full_version < '3.9'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e4/60/0b46dfd568d1e22ff587ff0b00829a11411bc34be1b6497c8783cbd9ec82/aiostream-0.5.2.tar.gz", hash = "sha256:b71b519a2d66c38f0872403ab86417955b77352f08d9ad02ad46fc3926b389f4", size = 35339 }
 wheels = [
@@ -182,6 +186,22 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d9/74/57df1ab0ce6bc5f6fa868e08de20df8ac58f9c44330c7671ad922d2bbeae/cachetools-5.5.1.tar.gz", hash = "sha256:70f238fbba50383ef62e55c6aff6d9673175fe59f7c6782c7a0b9e38f4a9df95", size = 28044 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ec/4e/de4ff18bcf55857ba18d3a4bd48c8a9fde6bb0980c9d20b263f05387fd88/cachetools-5.5.1-py3-none-any.whl", hash = "sha256:b76651fdc3b24ead3c648bbdeeb940c1b04d365b38b4af66788f9ec4a81d42bb", size = 9530 },
+]
+
+[[package]]
+name = "cbor2"
+version = "5.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d9/8e/8b4fdde28e42ffcd741a37f4ffa9fb59cd4fe01625b544dfcfd9ccb54f01/cbor2-5.8.0.tar.gz", hash = "sha256:b19c35fcae9688ac01ef75bad5db27300c2537eb4ee00ed07e05d8456a0d4931", size = 107825 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6b/e6/8de57a63d7ebba14ae484346dc0447327971fa8a74cc83d1264bdb5936f0/cbor2-5.8.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:6cda8fc407e91c4b07f1ae217332b2418096345b2f003894425bd874af445573", size = 69892 },
+    { url = "https://files.pythonhosted.org/packages/4e/ac/84d98df63af8930f47437e84c010a41f002e52710d84851970c86facfe48/cbor2-5.8.0-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f935c87350cfcccfa3499413c90d62d0591c8220932c200c2a7108737d4c96c6", size = 259771 },
+    { url = "https://files.pythonhosted.org/packages/18/df/b3ec7fd8a114369b670cc0068e55857eb169e4fc120d7fd216f1e85eca7a/cbor2-5.8.0-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:8f36afff8d8527d68cabf1b13acef15a573c0864b99017e315dcbe5710cb7e6e", size = 251026 },
+    { url = "https://files.pythonhosted.org/packages/98/5d/0e6e9ce058b875bd91324df6c6e533a74dc216231599013a8f4633a16689/cbor2-5.8.0-cp39-cp39-musllinux_1_2_aarch64.whl", hash = "sha256:d9f197a7b33c3afa44f18d16a2f823c1c020e3eb57a79cfaa0f21435e9a7f732", size = 254147 },
+    { url = "https://files.pythonhosted.org/packages/41/f9/4479acf99b945d95600c3e7210a0979a1bf92fccd0520b1576adf48d1a62/cbor2-5.8.0-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:4df31a52b20d28bf60ee35d16b2b43c2870b77c901cbc42e4151b575b20d522e", size = 245955 },
+    { url = "https://files.pythonhosted.org/packages/c4/e2/59a9974353633668ebf7d0fd92d7f574991fbecc1c1cf74a0211069089db/cbor2-5.8.0-cp39-cp39-win_amd64.whl", hash = "sha256:88db454bfdfeb7c611b926e70f28d4bc37e7cbc55594141a3514cc087c8890c2", size = 69305 },
+    { url = "https://files.pythonhosted.org/packages/c5/67/db17f6307a019ebaa5c1f4edc1e1e552edfa96d93f0b64e7f20812afe938/cbor2-5.8.0-cp39-cp39-win_arm64.whl", hash = "sha256:b0400d2c98b3137448090cd9cfa9d3ecf1b04852328339c85025b1c3acfd8b7d", size = 64982 },
+    { url = "https://files.pythonhosted.org/packages/d6/4f/101071f880b4da05771128c0b89f41e334cff044dee05fb013c8f4be661c/cbor2-5.8.0-py3-none-any.whl", hash = "sha256:3727d80f539567b03a7aa11890e57798c67092c38df9e6c23abb059e0f65069c", size = 24374 },
 ]
 
 [[package]]
@@ -945,25 +965,56 @@ wheels = [
 name = "modal"
 version = "0.65.66"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.9'",
+]
 dependencies = [
-    { name = "aiohttp" },
-    { name = "aiostream" },
-    { name = "certifi" },
-    { name = "click" },
-    { name = "fastapi" },
-    { name = "grpclib" },
-    { name = "protobuf" },
-    { name = "rich" },
-    { name = "synchronicity" },
-    { name = "toml" },
-    { name = "typer" },
-    { name = "types-certifi" },
-    { name = "types-toml" },
-    { name = "typing-extensions" },
-    { name = "watchfiles" },
+    { name = "aiohttp", marker = "python_full_version < '3.9'" },
+    { name = "aiostream", marker = "python_full_version < '3.9'" },
+    { name = "certifi", marker = "python_full_version < '3.9'" },
+    { name = "click", marker = "python_full_version < '3.9'" },
+    { name = "fastapi", marker = "python_full_version < '3.9'" },
+    { name = "grpclib", marker = "python_full_version < '3.9'" },
+    { name = "protobuf", marker = "python_full_version < '3.9'" },
+    { name = "rich", marker = "python_full_version < '3.9'" },
+    { name = "synchronicity", version = "0.9.16", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "toml", marker = "python_full_version < '3.9'" },
+    { name = "typer", marker = "python_full_version < '3.9'" },
+    { name = "types-certifi", marker = "python_full_version < '3.9'" },
+    { name = "types-toml", marker = "python_full_version < '3.9'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.9'" },
+    { name = "watchfiles", marker = "python_full_version < '3.9'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/36/71/180409a37655f9338dc1974e4f3de75cd93c115d53b0c833254692db3900/modal-0.65.66-py3-none-any.whl", hash = "sha256:0d64cacbd1c1d8141c8dbb2d1d2732a458f4363bd7bec7dfc94e412f522c9840", size = 488324 },
+]
+
+[[package]]
+name = "modal"
+version = "1.2.6"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.9'",
+]
+dependencies = [
+    { name = "aiohttp", marker = "python_full_version >= '3.9'" },
+    { name = "cbor2", marker = "python_full_version >= '3.9'" },
+    { name = "certifi", marker = "python_full_version >= '3.9'" },
+    { name = "click", marker = "python_full_version >= '3.9'" },
+    { name = "grpclib", marker = "python_full_version >= '3.9'" },
+    { name = "protobuf", marker = "python_full_version >= '3.9'" },
+    { name = "rich", marker = "python_full_version >= '3.9'" },
+    { name = "synchronicity", version = "0.10.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "toml", marker = "python_full_version >= '3.9'" },
+    { name = "typer", marker = "python_full_version >= '3.9'" },
+    { name = "types-certifi", marker = "python_full_version >= '3.9'" },
+    { name = "types-toml", marker = "python_full_version >= '3.9'" },
+    { name = "typing-extensions", marker = "python_full_version >= '3.9'" },
+    { name = "watchfiles", marker = "python_full_version >= '3.9'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6d/82/45a5f0d5e03eac6ca45c7273fe93e1ad9347162d97c2926be813933721ea/modal-1.2.6.tar.gz", hash = "sha256:95a81b7218cc8f6a4b2a23f74d2afaa972293926729c67c00d881b0daf3ee79a", size = 644401 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/3f/9aa4175a49152043ae43f6a7570511d64c7916d8248f694c93218b3f322f/modal-1.2.6-py3-none-any.whl", hash = "sha256:fdd7ee42e546aa445d915887801c4cad3e73aa667eb5d8f9bd0db618a1914e72", size = 740680 },
 ]
 
 [[package]]
@@ -1629,7 +1680,7 @@ name = "sigtools"
 version = "4.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "attrs" },
+    { name = "attrs", marker = "python_full_version < '3.9'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5f/db/669ca14166814da187b3087b908ca924cf83f5b504fe23b3859a3ef67d4f/sigtools-4.0.1.tar.gz", hash = "sha256:4b8e135a9cd4d2ea00da670c093372d74e672ba3abb87f4c98d8e73dea54445c", size = 71910 }
 wheels = [
@@ -1694,13 +1745,31 @@ wheels = [
 name = "synchronicity"
 version = "0.9.16"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.9'",
+]
 dependencies = [
-    { name = "sigtools" },
-    { name = "typing-extensions" },
+    { name = "sigtools", marker = "python_full_version < '3.9'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.9'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0f/75/0987c52929e352f0055705ece16614ce107db26856a4ee7850c6ae39413e/synchronicity-0.9.16.tar.gz", hash = "sha256:bc174b756d12330b1e6027f8293c3b944cf3684dec241af009cb7bb169a0072f", size = 53303 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cf/db/772959498f87bc03f4c8ebe8ee0d07dee4cab2a862b66361d1ef3123e0d8/synchronicity-0.9.16-py3-none-any.whl", hash = "sha256:79dd3451c063a06489d466b0585808e1d5d257fc3c2304f5f733a142ef269e97", size = 37595 },
+]
+
+[[package]]
+name = "synchronicity"
+version = "0.10.5"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.9'",
+]
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version >= '3.9'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fd/32/f2d3fa0021dcd185b20e8b171cbae68065b1e43b89cecf310861679e4e7f/synchronicity-0.10.5.tar.gz", hash = "sha256:6bdb3ea99f327e2d5602ad134458244ddaf331d56951634e5424df1edb07fe0d", size = 57264 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/91/cb5b41ee00e556703bdd4f4c52c58473eef8bc9e615d6c1930b75de50f8b/synchronicity-0.10.5-py3-none-any.whl", hash = "sha256:8bcdbfe6f9456ddcfcb267e0ca853c3b7650f129acf3abae4af45caf85d66d16", size = 39805 },
 ]
 
 [[package]]
@@ -1968,7 +2037,8 @@ dependencies = [
     { name = "fastapi" },
     { name = "intervaltree" },
     { name = "kundajelab-shap" },
-    { name = "modal" },
+    { name = "modal", version = "0.65.66", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
+    { name = "modal", version = "1.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "pyarrow" },
