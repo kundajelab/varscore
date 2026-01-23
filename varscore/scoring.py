@@ -34,6 +34,7 @@ def score_variants(
     peaks_dist_loc: str,
     out_path: str,
     batch_size: int = 250000,
+    model_batch_size: int = 256,
     reuse_output: bool = True,
 ) -> None:
     """Score variants through a model.
@@ -49,6 +50,7 @@ def score_variants(
         peaks_dist_loc: The path to the model's peak distribution.
         out_path: The path to save the scores dataframe.
         batch_size: Number of variants to process at once to manage memory.
+        model_batch_size: Batch size for ChromBPNet model predictions (default: 256).
         reuse_output: If True, attempt to reuse existing output and skip already scored variants.
     """
     start_time = datetime.now()
@@ -59,6 +61,7 @@ def score_variants(
     logger.info(f"Peaks distribution: {peaks_dist_loc}")
     logger.info(f"Output path: {out_path}")
     logger.info(f"Batch size: {batch_size}")
+    logger.info(f"Model batch size: {model_batch_size}")
     logger.info(f"Reuse output: {reuse_output}")
     
     # Load model and peak distribution once
@@ -157,8 +160,8 @@ def score_variants(
         
         # Make predictions for this batch
         logger.info(f"Batch {start_idx}-{end_idx}: Making predictions...")
-        ref_pred_logits, ref_pred_logcts = chrombpnet_utils.predict(model, ref_seqs)
-        alt_pred_logits, alt_pred_logcts = chrombpnet_utils.predict(model, alt_seqs)
+        ref_pred_logits, ref_pred_logcts = chrombpnet_utils.predict(model, ref_seqs, batch_size=model_batch_size)
+        alt_pred_logits, alt_pred_logcts = chrombpnet_utils.predict(model, alt_seqs, batch_size=model_batch_size)
         
         # Score this batch
         logger.info(f"Batch {start_idx}-{end_idx}: Computing scores...")
@@ -287,6 +290,7 @@ def main():
         args.peaks_dist_loc,
         args.out_path,
         args.batch_size,
+        args.model_batch_size,
         args.reuse_output,
     )
 
@@ -316,6 +320,10 @@ def _parse_args():
     parser.add_argument(
         "-b", "--batch_size", type=int, default=250000,
         help="Number of variants to process at once (default: 250000)."
+    )
+    parser.add_argument(
+        "--model-batch-size", type=int, default=256,
+        help="Batch size for ChromBPNet model predictions (default: 256)."
     )
     parser.add_argument(
         "--no-reuse-output", dest="reuse_output", action="store_false",
