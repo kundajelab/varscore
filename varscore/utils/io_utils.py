@@ -98,7 +98,7 @@ def validate_variant(
     """
     try:
         
-        if chro not in genome.keys() or not re.match(r'^chr[1-9XY]*$', chro):
+        if chro not in genome.keys() or not re.match(r'^chr([1-9]|1[0-9]|2[0-2]|X|Y)$', chro):
             return ValidationResult(
                 is_valid=False,
                 error_reason=ValidationErrorReason.INVALID_CHROMOSOME,
@@ -244,3 +244,8 @@ def load_variants(variants_loc: str) -> pd.DataFrame:
     """Load a variants DataFrame."""
     variants_df = pd.read_csv(variants_loc, sep="\t", names=VARIANT_SCHEMA)
     return variants_df
+
+
+if __name__ == "__main__":
+    genome = pyfaidx.Fasta("/users/riyasinh/projects/chrombpnet-registry/tmpfiles/genomes/hg38/genome.fasta")
+    print(genome.keys())
