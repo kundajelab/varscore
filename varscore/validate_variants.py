@@ -105,7 +105,8 @@ def validate_variants(
     # Save valid variants if requested
     if valid_out_path and not valid_df.empty:
         logger.info(f"Saving {len(valid_df)} valid variants...")
-        valid_df.to_csv(valid_out_path, sep="\t", index=False, header=False)
+        # Select only 4 columns: chr, pos, ref, alt (no variant_id)
+        valid_df[["chr", "pos", "ref", "alt"]].to_csv(valid_out_path, sep="\t", index=False, header=False)
         logger.info(f"Valid variants saved to {valid_out_path}")
     elif valid_out_path and valid_df.empty:
         logger.warning("No valid variants to save")
