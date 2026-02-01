@@ -29,6 +29,7 @@ class ValidationErrorReason(Enum):
 class ValidationResult:
     """Result of validating a single variant."""
     is_valid: bool
+    chro: Optional[str] = None
     ref_seq: Optional[str] = None
     alt_seq: Optional[str] = None
     error_reason: Optional[ValidationErrorReason] = None
@@ -97,10 +98,12 @@ def validate_variant(
         ValidationResult with validation status and error details if invalid
     """
     try:
-        
+        if not str(chro).startswith("chr"):
+            chro = "chr" + str(chro)
         if chro not in genome.keys() or not re.match(r'^chr([1-9]|1[0-9]|2[0-2]|X|Y)$', chro):
             return ValidationResult(
                 is_valid=False,
+                chro=chro,
                 error_reason=ValidationErrorReason.INVALID_CHROMOSOME,
                 error_message=f"Chromosome {chro} not found in genome"
             )
@@ -108,6 +111,7 @@ def validate_variant(
         if not set(ref).issubset({'A', 'C', 'G', 'T'}):
             return ValidationResult(
                 is_valid=False,
+                chro=chro,
                 error_reason=ValidationErrorReason.INVALID_REFERENCE,
                 error_message=f"Reference {ref} is not a valid DNA sequence"
             )
@@ -115,6 +119,7 @@ def validate_variant(
         if not set(alt).issubset({'A', 'C', 'G', 'T'}):
             return ValidationResult(
                 is_valid=False,
+                chro=chro,
                 error_reason=ValidationErrorReason.INVALID_ALTERNATE,
                 error_message=f"Alternate {alt} is not a valid DNA sequence"
             )
@@ -124,6 +129,7 @@ def validate_variant(
         if ref_seq[width // 2 : width // 2 + len(ref)] != ref:
             return ValidationResult(
                 is_valid=False,
+                chro=chro,
                 error_reason=ValidationErrorReason.REF_MISMATCH,
                 error_message=f"Expected {ref}, got {ref_seq[width // 2 : width // 2 + len(ref)]}"
             )
@@ -137,6 +143,7 @@ def validate_variant(
         if len(alt_seq) != width:
             return ValidationResult(
                 is_valid=False,
+                chro=chro,
                 error_reason=ValidationErrorReason.ALT_LENGTH_MISMATCH,
                 error_message=f"Expected length {width}, got {len(alt_seq)}"
             )
@@ -144,12 +151,14 @@ def validate_variant(
         if alt_seq[width // 2 : width // 2 + len(alt)] != alt:
             return ValidationResult(
                 is_valid=False,
+                chro=chro,
                 error_reason=ValidationErrorReason.ALT_MISMATCH,
                 error_message=f"Expected {alt}, got {alt_seq[width // 2 : width // 2 + len(alt)]}"
             )
         
         return ValidationResult(
             is_valid=True,
+            chro=chro,
             ref_seq=ref_seq,
             alt_seq=alt_seq
         )
@@ -157,6 +166,7 @@ def validate_variant(
     except Exception as e:
         return ValidationResult(
             is_valid=False,
+            chro=chro,
             error_reason=ValidationErrorReason.GENOME_ACCESS_ERROR,
             error_message=str(e)
         )
@@ -224,7 +234,9 @@ def validate_variants(
         result = validate_variant(chro, pos, ref, alt, genome, width)
         
         if result.is_valid:
-            valid_variants.append(row)
+            variant_row = row.copy()
+            variant_row['chr'] = result.chro
+            valid_variants.append(variant_row)
         else:
             variant_row = row.copy()
             variant_row['error_reason'] = result.error_reason.value
