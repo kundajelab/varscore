@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import List, Tuple
 from intervaltree import IntervalTree
 import numpy as np
@@ -68,35 +69,48 @@ class DNATree:
 ###############
 # REGION TYPE #
 ###############
-print("Loading Promoter DNATree ...")
-PROMOTER_DNATREE = loadDNATree(
-    os.path.join(
-        os.path.dirname(__file__), "..", "data", "promoters_proteincoding.dnatree"
+# Lazy-loaded DNATrees (loaded on first use)
+
+@lru_cache(maxsize=1)
+def _get_promoter_dnatree():
+    print("Loading Promoter DNATree ...")
+    return loadDNATree(
+        os.path.join(
+            os.path.dirname(__file__), "..", "data", "promoters_proteincoding.dnatree"
+        )
     )
-)
 
-print("Loading Gene DNATree ...")
-GENE_DNATREE = loadDNATree(
-    os.path.join(os.path.dirname(__file__), "..", "data", "genes_proteincoding.dnatree")
-)
 
-print("Loading Exon DNATree ...")
-EXON_DNATREE = loadDNATree(
-    os.path.join(os.path.dirname(__file__), "..", "data", "exons_proteincoding.dnatree")
-)
+@lru_cache(maxsize=1)
+def _get_gene_dnatree():
+    print("Loading Gene DNATree ...")
+    return loadDNATree(
+        os.path.join(os.path.dirname(__file__), "..", "data", "genes_proteincoding.dnatree")
+    )
 
-print("Loading CCRE DNATree ...")
-CCRE_FILEPATH = os.path.join(os.path.dirname(__file__), "..", "data", "ccres.dnatree")
-if not os.path.exists(CCRE_FILEPATH):
-    raise FileNotFoundError(f"CCRE DNATree file not found. Please see the README for instructions on how to construct the DNATree.")
-CCRE_DNATREE = loadDNATree(CCRE_FILEPATH)
+
+@lru_cache(maxsize=1)
+def _get_exon_dnatree():
+    print("Loading Exon DNATree ...")
+    return loadDNATree(
+        os.path.join(os.path.dirname(__file__), "..", "data", "exons_proteincoding.dnatree")
+    )
+
+
+@lru_cache(maxsize=1)
+def _get_ccre_dnatree():
+    print("Loading CCRE DNATree ...")
+    filepath = os.path.join(os.path.dirname(__file__), "..", "data", "ccres.dnatree")
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"CCRE DNATree file not found. Please see the README for instructions on how to construct the DNATree.")
+    return loadDNATree(filepath)
 
 def region_type(chro, start, end):
-    if PROMOTER_DNATREE.overlap(chro, start, end) is not None:
+    if _get_promoter_dnatree().overlap(chro, start, end) is not None:
         return "promoter"
-    elif EXON_DNATREE.overlap(chro, start, end) is not None:
+    elif _get_exon_dnatree().overlap(chro, start, end) is not None:
         return "exonic"
-    elif GENE_DNATREE.overlap(chro, start, end) is not None:
+    elif _get_gene_dnatree().overlap(chro, start, end) is not None:
         return "intronic"
     return "intergenic"
 
@@ -104,14 +118,13 @@ def region_type(chro, start, end):
 ################
 # NEAREST GENE #
 ################
-def __load_genes_by_chro():
-    gene_df = pd.read_csv(GENE_DF_LOC, sep="\t")
+@lru_cache(maxsize=1)
+def _get_genes_by_chro():
+    print("Loading gene df ...")
+    gene_df_loc = os.path.join(os.path.dirname(__file__), "..", "data", "gene_df.tsv")
+    gene_df = pd.read_csv(gene_df_loc, sep="\t")
     gene_df = gene_df[gene_df["gene_type"] == "protein_coding"]
     return {chro: gene_df[gene_df["chro"] == chro] for chro in set(gene_df["chro"])}
-
-print("Loading gene df ...")
-GENE_DF_LOC = os.path.join(os.path.dirname(__file__), "..", "data", "gene_df.tsv")
-GENES_BY_CHRO = __load_genes_by_chro()
 
 class GeneAnnotation(BaseModel):
     gene_name: str
@@ -120,7 +133,7 @@ class GeneAnnotation(BaseModel):
     type: str
 
 def nearest_genes(chro, pos, num_genes=5) -> Tuple[List[GeneAnnotation], bool]:
-    genes_chro = GENES_BY_CHRO[chro].copy()
+    genes_chro = _get_genes_by_chro()[chro].copy()
     strand_sign = 1 * (genes_chro["strand"] == "+") - 1 * (genes_chro["strand"] == "-")
 
     start_dist = (pos - genes_chro["start"]) * strand_sign
@@ -156,7 +169,7 @@ def ccre_overlap(chr, start, end):
     """
     Calculates variant overlap with cCREs, using a local DNATree if available, or querying the Factorbook API if not.
     """
-    element = CCRE_DNATREE.overlap(chr, start, end)
+    element = _get_ccre_dnatree().overlap(chr, start, end)
     if element is None:
         return None
     data = element[0][3]
