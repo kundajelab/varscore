@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 from pydantic import BaseModel
 
@@ -5,9 +6,6 @@ from typing import List, Optional
 
 import varscore.utils.region_utils as region_utils
 import varscore.utils.variant_utils as variant_utils
-# import polars as pl
-# import pybedtools
-# from pybedtools import BedTool
 
 
 class VariantAnnotationInput(BaseModel):
@@ -43,9 +41,62 @@ class AnnotatedVariant(BaseModel):
     af_sas: float
     af_remaining: float
     
+##################
+# CORE FUNCTIONS #
+##################
+
+
+def annotate_variants_file(
+    variants_loc: str,
+    out_path: str,
+) -> pd.DataFrame:
+    """Annotate variants from a TSV file and save results as JSONL.
+
+    Args:
+        variants_loc: Path to input TSV file with columns: chr, pos, ref, alt
+        out_path: Path to save annotated variants JSONL
+
+    Returns:
+        DataFrame with annotated variants
+    """
+    # Read input TSV
+    df = pd.read_csv(variants_loc, sep="\t")
+
+    # Validate required columns
+    required_cols = {"chr", "pos", "ref", "alt"}
+    if not required_cols.issubset(df.columns):
+        missing = required_cols - set(df.columns)
+        raise ValueError(f"Input TSV missing required columns: {missing}")
+
+    # Convert to VariantAnnotationInput objects
+    variants = [
+        VariantAnnotationInput(
+            chr=row["chr"],
+            pos=int(row["pos"]),
+            ref=row["ref"],
+            alt=row["alt"],
+        )
+        for _, row in df.iterrows()
+    ]
+
+    # Annotate
+    annotated = annotate_variants(variants)
+
+    # Convert to records (nested objects preserved in JSONL)
+    records = [av.model_dump() for av in annotated]
+    output_df = pd.DataFrame(records)
+
+    # Write output JSONL
+    output_df.to_json(out_path, orient="records", lines=True)
+    print(f"Annotated {len(output_df)} variants -> {out_path}")
+
+    return output_df
+
+
 def annotate_variants(variants: List[VariantAnnotationInput]) -> List[AnnotatedVariant]:
     """Takes in a list of Variants and returns a list of AnnotatedVariants."""
     return [annotate_variant(variant) for variant in variants]
+
 
 def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
     """Takes in a Variant and returns an AnnotatedVariant."""
@@ -112,8 +163,33 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
     )
 
 
+########
+# MAIN #
+########
+
+
+def main():
+    args = _parse_args()
+    annotate_variants_file(args.variants_loc, args.out_path)
+
+
+def _parse_args():
+    parser = argparse.ArgumentParser(
+        description="Annotate variants with region type, nearest genes, cCREs, and allele frequencies."
+    )
+    parser.add_argument(
+        "-v", "--variants_loc", required=True, help="Input TSV file with columns: chr, pos, ref, alt"
+    )
+    parser.add_argument(
+        "-o", "--out_path", required=True, help="Output JSONL file with annotations"
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    tv = VariantAnnotationInput(chr="chr6", pos=14501369, ref="A", alt="G")
-    av = annotate_variant(tv)
-    print(av)
-    print(annotate_variant(VariantAnnotationInput(chr="chr1", pos=109208255, ref="T", alt="A")))
+    main()
+
+
+"""
+python -m varscore.annotations -v variants.tsv -o annotated.jsonl
+"""
