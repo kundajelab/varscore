@@ -48,25 +48,22 @@ class AnnotatedVariant(BaseModel):
 
 def annotate_variants_file(
     variants_loc: str,
-    out_path: str,
+    out_path: Optional[str] = None,
 ) -> pd.DataFrame:
     """Annotate variants from a TSV file and save results as JSONL.
 
     Args:
-        variants_loc: Path to input TSV file with columns: chr, pos, ref, alt
+        variants_loc: Path to input TSV file (no header, columns: chr, pos, ref, alt)
         out_path: Path to save annotated variants JSONL
 
     Returns:
         DataFrame with annotated variants
     """
-    # Read input TSV
-    df = pd.read_csv(variants_loc, sep="\t")
-
-    # Validate required columns
-    required_cols = {"chr", "pos", "ref", "alt"}
-    if not required_cols.issubset(df.columns):
-        missing = required_cols - set(df.columns)
-        raise ValueError(f"Input TSV missing required columns: {missing}")
+    if out_path is None:
+        out_path = variants_loc.replace(".tsv", "_annotated.jsonl")
+    
+    # Read input TSV (no header, columns: chr, pos, ref, alt)
+    df = pd.read_csv(variants_loc, sep="\t", header=None, names=["chr", "pos", "ref", "alt"])
 
     # Convert to VariantAnnotationInput objects
     variants = [
@@ -178,10 +175,10 @@ def _parse_args():
         description="Annotate variants with region type, nearest genes, cCREs, and allele frequencies."
     )
     parser.add_argument(
-        "-v", "--variants_loc", required=True, help="Input TSV file with columns: chr, pos, ref, alt"
+        "-v", "--variants_loc", required=True, help="Input TSV file (no header, columns: chr, pos, ref, alt)"
     )
     parser.add_argument(
-        "-o", "--out_path", required=True, help="Output JSONL file with annotations"
+        "-o", "--out_path", required=False, help="Output JSONL file with annotations"
     )
     return parser.parse_args()
 
