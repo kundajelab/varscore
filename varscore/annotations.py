@@ -1,8 +1,12 @@
 import argparse
+import logging
+import time
 import pandas as pd
 from pydantic import BaseModel
 
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 import varscore.utils.region_utils as region_utils
 import varscore.utils.variant_utils as variant_utils
@@ -49,45 +53,70 @@ class AnnotatedVariant(BaseModel):
 def annotate_variants_file(
     variants_loc: str,
     out_path: Optional[str] = None,
-) -> pd.DataFrame:
+    batch_size: int = 2000,
+) -> None:
     """Annotate variants from a TSV file and save results as JSONL.
+
+    Reads, annotates, and writes in batches to keep memory usage constant
+    regardless of input size.
 
     Args:
         variants_loc: Path to input TSV file (no header, columns: chr, pos, ref, alt)
         out_path: Path to save annotated variants JSONL
-
-    Returns:
-        DataFrame with annotated variants
+        batch_size: Number of variants to process per batch
     """
     if out_path is None:
         out_path = variants_loc.replace(".tsv", "_annotated.jsonl")
-    
-    # Read input TSV (no header, columns: chr, pos, ref, alt)
-    df = pd.read_csv(variants_loc, sep="\t", header=None, names=["chr", "pos", "ref", "alt"])
 
-    # Convert to VariantAnnotationInput objects
-    variants = [
-        VariantAnnotationInput(
-            chr=row["chr"],
-            pos=int(row["pos"]),
-            ref=row["ref"],
-            alt=row["alt"],
+    # Count total lines for progress reporting
+    with open(variants_loc) as f:
+        total_variants = sum(1 for _ in f)
+    logger.info(f"Starting annotation of {total_variants} variants from {variants_loc}")
+    logger.info(f"Batch size: {batch_size} | Output: {out_path}")
+
+    total_written = 0
+    start_time = time.time()
+
+    # Read input TSV in chunks
+    chunks = pd.read_csv(
+        variants_loc, sep="\t", header=None,
+        names=["chr", "pos", "ref", "alt"],
+        chunksize=batch_size,
+    )
+
+    for batch_num, chunk_df in enumerate(chunks, start=1):
+        batch_start = time.time()
+
+        # Convert chunk to VariantAnnotationInput objects
+        variants = [
+            VariantAnnotationInput(
+                chr=row["chr"],
+                pos=int(row["pos"]),
+                ref=row["ref"],
+                alt=row["alt"],
+            )
+            for _, row in chunk_df.iterrows()
+        ]
+
+        # Annotate batch
+        annotated = annotate_variants(variants)
+
+        # Write batch to JSONL (append mode after the first batch)
+        records = [av.model_dump() for av in annotated]
+        batch_df = pd.DataFrame(records)
+        write_mode = "w" if batch_num == 1 else "a"
+        batch_df.to_json(out_path, orient="records", lines=True, mode=write_mode)
+
+        total_written += len(records)
+        batch_elapsed = time.time() - batch_start
+        overall_elapsed = time.time() - start_time
+        logger.info(
+            f"Batch {batch_num}: annotated {len(records)} variants in {batch_elapsed:.1f}s "
+            f"({total_written}/{total_variants} total, {overall_elapsed:.1f}s elapsed)"
         )
-        for _, row in df.iterrows()
-    ]
 
-    # Annotate
-    annotated = annotate_variants(variants)
-
-    # Convert to records (nested objects preserved in JSONL)
-    records = [av.model_dump() for av in annotated]
-    output_df = pd.DataFrame(records)
-
-    # Write output JSONL
-    output_df.to_json(out_path, orient="records", lines=True)
-    print(f"Annotated {len(output_df)} variants -> {out_path}")
-
-    return output_df
+    overall_elapsed = time.time() - start_time
+    logger.info(f"Done — {total_written} variants annotated in {overall_elapsed:.1f}s -> {out_path}")
 
 
 def annotate_variants(variants: List[VariantAnnotationInput]) -> List[AnnotatedVariant]:
@@ -166,8 +195,13 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
     args = _parse_args()
-    annotate_variants_file(args.variants_loc, args.out_path)
+    annotate_variants_file(args.variants_loc, args.out_path, args.batch_size)
 
 
 def _parse_args():
@@ -179,6 +213,9 @@ def _parse_args():
     )
     parser.add_argument(
         "-o", "--out_path", required=False, help="Output JSONL file with annotations"
+    )
+    parser.add_argument(
+        "-b", "--batch_size", type=int, default=2000, help="Number of variants per batch (default: 2000)"
     )
     return parser.parse_args()
 
