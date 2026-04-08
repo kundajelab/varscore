@@ -1,1 +1,1 @@
-print("Using tri analytics analysis module!")
+print("Using trio analysis module!")
