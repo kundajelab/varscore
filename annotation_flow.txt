@@ -1,0 +1,121 @@
+Annotation Flow
+===============
+
+──────────────────────────────────────────────────────────────────
+ BRANCH A: Trio Annotation (trio_annotation)
+──────────────────────────────────────────────────────────────────
+
+ ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+ │  Child       │  │  Mother      │  │  Father      │
+ │  Variant     │  │  Variant     │  │  Variant     │
+ │(chr,pos,r,a) │  │(chr,pos,r,a) │  │(chr,pos,r,a) │
+ └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+        │                 │                 │
+        ▼                 ▼                 ▼
+  normalize_variant() ×3  (trim suffix → trim prefix + advance pos)
+        │                 │                 │
+        ▼                 ▼                 ▼
+   child_norm        mother_norm       father_norm
+        │
+        ├── child_norm == mother_norm? ──┐
+        └── child_norm == father_norm? ──┤
+                                        ▼
+                              in_mother  in_father
+                                  │          │
+                          ┌───────┴──────────┴───────┐
+                          │  T / T  → "Both"          │
+                          │  T / F  → "M"             │
+                          │  F / T  → "F"             │
+                          │  F / F  → "De_Novo"       │
+                          └──────────────────────────┘
+                                        │
+                                        ▼
+                              inheritance label
+                                        │
+                                        ▼
+                           VariantAnnotationInput
+                           (passed to Branch B ↓)
+
+──────────────────────────────────────────────────────────────────
+ BRANCH B: Variant Annotation (main branch)
+──────────────────────────────────────────────────────────────────
+
+┌─────────────────────────────────────────────────┐
+│              VariantAnnotationInput              │
+│              (chr, pos, ref, alt)                │
+└───────────────────────┬─────────────────────────┘
+                        │
+                        ▼
+              annotate_variants()
+              [batch: List → List]
+                        │
+                        ▼
+               annotate_variant()
+                        │
+          ┌─────────────┼──────────────────┐
+          │             │                  │
+          ▼             ▼                  ▼
+   ┌─────────────┐ ┌───────────────┐ ┌──────────────┐
+   │ 1. BASIC    │ │ 2. REGION     │ │ 3. NEAREST   │
+   │   FIELDS    │ │    TYPE       │ │    GENES     │
+   │             │ │               │ │              │
+   │ ref_length  │ │ DNATree lookup│ │ gene_df.tsv  │
+   │ alt_length  │ │ (priority):   │ │ protein-     │
+   │ var_length  │ │  promoter     │ │ coding genes │
+   │             │ │  → exonic     │ │ on same chrom│
+   │ variant_    │ │  → intronic   │ │              │
+   │ type:       │ │  → intergenic │ │ → 5 nearest  │
+   │  SNV        │ │               │ │   genes      │
+   │  insertion  │ │ Data:         │ │ → within_    │
+   │  deletion   │ │ promoters.    │ │   100kb bool │
+   │  substitut. │ │ exons.        │ └──────────────┘
+   └─────────────┘ │ genes.        │
+                   │ .dnatree      │
+                   └───────────────┘
+          ┌───────────────────────────┐
+          │                           │
+          ▼                           ▼
+   ┌──────────────┐          ┌──────────────────────┐
+   │ 4. CCRE      │          │ 5. ALLELE FREQUENCY  │
+   │    OVERLAP   │          │                      │
+   │              │          │ variants.pkl.gz      │
+   │ ccres.dnatree│          │ (OpenTargets)        │
+   │              │          │                      │
+   │ → accession  │          │ → in_ot (bool)       │
+   │ → group      │          │ → af_afr / af_ami    │
+   │ → None if    │          │   af_amr / af_asj    │
+   │   no overlap │          │   af_eas / af_fin    │
+   └──────────────┘          │   af_mid / af_nfe    │
+                             │   af_sas / af_rem.   │
+                             └──────────────────────┘
+                        │
+                        ▼
+                 ┌──────────────────────┐
+                 │ 6. INHERITANCE       │
+                 │                      │
+                 │ tri_anotation()      │
+                 │ (Branch A result)    │
+                 │                      │
+                 │ → "Both"             │
+                 │ → "M"                │
+                 │ → "F"                │
+                 │ → "De_Novo"          │
+                 │ → "unknown"          │
+                 │   (if no parents)    │
+                 └──────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────┐
+│                 AnnotatedVariant                 │
+│         (Pydantic model — all fields above)      │
+└─────────────────────────────────────────────────┘
+
+
+Static data loaded once at import (no per-call file I/O):
+----------------------------------------------------------
+  promoters_proteincoding.dnatree  →  Promoter region lookup
+  exons_proteincoding.dnatree      →  Exon region lookup
+  genes_proteincoding.dnatree      →  Gene/intron region lookup
+  gene_df.tsv                      →  Nearest gene distance computation
+  ccres.dnatree                    →  cCRE overlap lookup
+  variants.pkl.gz                  →  OpenTargets allele frequencies

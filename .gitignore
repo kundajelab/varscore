@@ -11,3 +11,5 @@ ccres.dnatree
 *.gz
 *.bw
 *.tbi
+
+.DS_Store

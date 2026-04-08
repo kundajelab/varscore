@@ -5,6 +5,7 @@ from typing import List, Optional
 
 import varscore.utils.region_utils as region_utils
 import varscore.utils.variant_utils as variant_utils
+from varscore.trio_annotation.run import trio_annotation
 # import polars as pl
 # import pybedtools
 # from pybedtools import BedTool
@@ -42,12 +43,22 @@ class AnnotatedVariant(BaseModel):
     af_nfe: float
     af_sas: float
     af_remaining: float
+    inharitance: str
     
-def annotate_variants(variants: List[VariantAnnotationInput]) -> List[AnnotatedVariant]:
+def annotate_variants(
+    variants: List[VariantAnnotationInput],
+    mother_variants: Optional[List[VariantAnnotationInput]] = None,
+    father_variants: Optional[List[VariantAnnotationInput]] = None,
+) -> List[AnnotatedVariant]:
     """Takes in a list of Variants and returns a list of AnnotatedVariants."""
+    if mother_variants is not None and father_variants is not None:
+        return [
+            annotate_variant(child, mother, father)
+            for child, mother, father in zip(variants, mother_variants, father_variants)
+        ]
     return [annotate_variant(variant) for variant in variants]
 
-def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
+def annotate_variant(variant: VariantAnnotationInput, mother_variant: Optional[VariantAnnotationInput] = None, father_variant: Optional[VariantAnnotationInput] = None) -> AnnotatedVariant:
     """Takes in a Variant and returns an AnnotatedVariant."""
     # Get basic data from variant
     var_chr = variant.chr
@@ -83,6 +94,12 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
     # Allele Frequency Info
     ot_mafs = variant_utils.get_ot_variant(var_chr, var_pos, var_ref, var_alt)
 
+    # Inheritance (trio analysis)
+    if mother_variant is not None and father_variant is not None:
+        var_inheritance = trio_annotation(variant, mother_variant, father_variant)
+    else:
+        var_inheritance = "unknown"
+
     # Instantiate AnnotatedVariant
     return AnnotatedVariant(
         chr=var_chr,
@@ -109,6 +126,7 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
         af_nfe=ot_mafs["nfe_adj"] if ot_mafs else 0.0,
         af_sas=ot_mafs["sas_adj"] if ot_mafs else 0.0,
         af_remaining=ot_mafs["remaining_adj"] if ot_mafs else 0.0,
+        inharitance=var_inheritance,
     )
 
 
