@@ -1,13 +1,5 @@
-import os
-import pandas as pd
 from pydantic import BaseModel
-
-import argparse
-from varscore.utils.logging_config import get_logger
-
-logger = get_logger(__name__)
-
-TRIO_VARIANT_SCHEMA = ["chr", "pos", "ref", "alt"]
+from typing import List, Optional
 
 
 class VariantAnnotationInput(BaseModel):
@@ -39,31 +31,32 @@ def normalize_from_input(variant) -> tuple:
 
 def trio_annotation(
     variants_char: VariantAnnotationInput,
-    maternal_var_char: VariantAnnotationInput,
-    paternal_var_char: VariantAnnotationInput,
+    maternal_variants: Optional[List[VariantAnnotationInput]], 
+    paternal_variants: Optional[List[VariantAnnotationInput]]
 ) -> str:
     """Classify inheritance for a single child variant against one mother and one father variant.
 
     Args:
         variants_char: The child variant to classify.
-        maternal_var_char: The corresponding mother variant.
-        paternal_var_char: The corresponding father variant.
+        maternal_variants: A list of mother variants.
+        paternal_variants: A list of father variants.
 
     Returns:
         "Both" if present in both parents, "M" if maternal only,
         "F" if paternal only, or "De_Novo" if absent in both.
     """
-    norm = normalize_from_input(variants_char)
-    in_mother = norm == normalize_from_input(maternal_var_char)
-    in_father = norm == normalize_from_input(paternal_var_char)
+    # Convert to normalized set for O(1) lookup
+    mother_normal_set = {normalize_from_input(var) for var in maternal_variants}
+    father_normal_set = {normalize_from_input(var) for var in paternal_variants}
 
-    if in_mother and in_father:
+    norm = normalize_from_input(variants_char)
+
+    if (norm in mother_normal_set) and (norm in father_normal_set):
         return "Both"
-    elif in_mother:
+    elif norm in mother_normal_set:
         return "M"
-    elif in_father:
+    elif norm in father_normal_set:
         return "F"
     else:
         return "De_Novo"
-
 
