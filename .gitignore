@@ -5,7 +5,7 @@ dist/
 *.pyc
 plot_dir*/
 raw/
-
+*.DS_Store
 # Large files
 ccres.dnatree
 *.gz
