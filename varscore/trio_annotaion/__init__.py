@@ -46,16 +46,22 @@ def trio_annotation(
         "F" if paternal only, or "De_Novo" if absent in both.
     """
     # Convert to normalized set for O(1) lookup
-    mother_normal_set = {normalize_from_input(var) for var in maternal_variants_set}
-    father_normal_set = {normalize_from_input(var) for var in paternal_variants_set}
-
     norm = normalize_from_input(variants_char)
 
-    if (norm in mother_normal_set) and (norm in father_normal_set):
+    in_mother = (
+        norm in {normalize_from_input(v) for v in maternal_variants_set}
+        if maternal_variants_set is not None else None
+    )
+    in_father = (
+        norm in {normalize_from_input(v) for v in paternal_variants_set}
+        if paternal_variants_set is not None else None
+    )
+
+    if in_mother and in_father:
         return "Both"
-    elif norm in mother_normal_set:
+    elif norm in in_mother:
         return "M"
-    elif norm in father_normal_set:
+    elif norm in in_father:
         return "F"
     else:
         return "De_Novo"
