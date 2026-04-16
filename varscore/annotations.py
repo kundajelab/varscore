@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 import varscore.utils.region_utils as region_utils
 import varscore.utils.variant_utils as variant_utils
-from trio_annotaion import trio_annotation
+
 
 class VariantAnnotationInput(BaseModel):
     chr: str
@@ -44,7 +44,6 @@ class AnnotatedVariant(BaseModel):
     af_nfe: float
     af_sas: float
     af_remaining: float
-    inheritance: Optional[str]
     
 ##################
 # CORE FUNCTIONS #
@@ -53,8 +52,6 @@ class AnnotatedVariant(BaseModel):
 
 def annotate_variants_file(
     variants_loc: str,
-    maternal_variants_loc: Optional[str], #path to maternal variants file
-    paternal_variants_loc: Optional[str], #path to paternal variants file 
     out_path: Optional[str] = None,
     batch_size: int = 2000,
 ) -> None:
@@ -65,8 +62,6 @@ def annotate_variants_file(
 
     Args:
         variants_loc: Path to input TSV file (no header, columns: chr, pos, ref, alt)
-        maternal_variants_loc: Path to mother TSV file
-        paternal_variants_loc: Path to father TSV file
         out_path: Path to save annotated variants JSONL
         batch_size: Number of variants to process per batch
     """
@@ -89,29 +84,6 @@ def annotate_variants_file(
         chunksize=batch_size,
     )
 
-    if maternal_variants_loc:
-        mother_var_df = pd.read_csv(maternal_variants_loc, sep="\t")
-        mother_var_set = {
-            VariantAnnotationInput(
-                    chr=row[0],
-                    pos=int(row[1]),
-                    ref=row[2],
-                    alt=row[3],
-                )
-                for _, row in mother_var_df
-        }
-    if paternal_variants_loc:
-        father_var_df = pd.read_csv(paternal_variants_loc, sep="\t")
-        father_var_set = {
-            VariantAnnotationInput(
-                    chr=row[0],
-                    pos=int(row[1]),
-                    ref=row[2],
-                    alt=row[3],
-                )
-                for _, row in father_var_df
-        }
-
     for batch_num, chunk_df in enumerate(chunks, start=1):
         batch_start = time.time()
 
@@ -127,9 +99,6 @@ def annotate_variants_file(
         ]
 
         # Annotate batch
-        if mother_var_set and father_var_set:
-            annotated = annotate_variants(variants, mother_var_set, father_var_set)
-        
         annotated = annotate_variants(variants)
 
         # Write batch to JSONL (append mode after the first batch)
@@ -150,22 +119,12 @@ def annotate_variants_file(
     logger.info(f"Done — {total_written} variants annotated in {overall_elapsed:.1f}s -> {out_path}")
 
 
-def annotate_variants(
-        variants: List[VariantAnnotationInput],
-        maternal_variants_set: Optional[set[VariantAnnotationInput]], 
-        paternal_variants_set: Optional[set[VariantAnnotationInput]]  
-) -> List[AnnotatedVariant]:
+def annotate_variants(variants: List[VariantAnnotationInput]) -> List[AnnotatedVariant]:
     """Takes in a list of Variants and returns a list of AnnotatedVariants."""
-    if maternal_variants_set or paternal_variants_set:
-        return [annotate_variant(variant, maternal_variants_set, paternal_variants_set) for variant in variants]
     return [annotate_variant(variant) for variant in variants]
 
 
-def annotate_variant(
-        variant: VariantAnnotationInput,
-        maternal_variants_set: Optional[set[VariantAnnotationInput]], 
-        paternal_variants_set: Optional[set[VariantAnnotationInput]]
-) -> AnnotatedVariant:
+def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
     """Takes in a Variant and returns an AnnotatedVariant."""
     # Get basic data from variant
     var_chr = variant.chr
@@ -201,9 +160,6 @@ def annotate_variant(
     # Allele Frequency Info
     ot_mafs = variant_utils.get_ot_variant(var_chr, var_pos, var_ref, var_alt)
 
-    if maternal_variants_set and paternal_variants_set:
-        inheritance = trio_annotation(variants_char=variant, maternal_variants=maternal_variants_set, paternal_variants=paternal_variants_set)
-
     # Instantiate AnnotatedVariant
     return AnnotatedVariant(
         chr=var_chr,
@@ -230,7 +186,6 @@ def annotate_variant(
         af_nfe=ot_mafs["nfe_adj"] if ot_mafs else 0.0,
         af_sas=ot_mafs["sas_adj"] if ot_mafs else 0.0,
         af_remaining=ot_mafs["remaining_adj"] if ot_mafs else 0.0,
-        inheritance=inheritance if  inheritance else None,
     )
 
 

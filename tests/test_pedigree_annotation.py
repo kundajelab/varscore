@@ -1,5 +1,5 @@
 import pytest
-from varscore.trio_annotaion import trio_annotation, VariantAnnotationInput, normalize_variant, normalize_from_input
+from varscore.pedigree_annotaion import classify, VariantAnnotationInput, normalize_variant, normalize_from_input
 
 
 def _make(chrom, pos, ref, alt):
@@ -7,12 +7,14 @@ def _make(chrom, pos, ref, alt):
 
 
 def _classify(child, maternal, paternal):
-    """Run trio_annotation with list normalisation."""
+    """Run classify with list-to-normalized-set conversion."""
     if not isinstance(maternal, list):
         maternal = [maternal]
     if not isinstance(paternal, list):
         paternal = [paternal]
-    return trio_annotation(child, maternal, paternal)
+    maternal_norm = {normalize_from_input(v) for v in maternal}
+    paternal_norm = {normalize_from_input(v) for v in paternal}
+    return classify(child, maternal_norm, paternal_norm)
 
 
 # ---------------------------------------------------------------------------
@@ -57,10 +59,10 @@ class TestNormalizeFromInput:
 
 
 # ---------------------------------------------------------------------------
-# trio_annotation — inheritance classification
+# pedigree_annotation — inheritance classification
 # ---------------------------------------------------------------------------
 
-class TestTrioAnnotation:
+class TestPedigreeAnnotation:
     def test_de_novo(self):
         child = _make("chr1", 100, "A", "T")
         mother = _make("chr1", 100, "A", "C")

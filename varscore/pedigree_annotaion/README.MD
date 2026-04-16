@@ -1,5 +1,5 @@
 ### Summary
-Trio annotation is a Python module used to classify variant inheritance from parents.  
+Pedigree annotation is a Python module used to classify variant inheritance from parents.  
 
 - Purpose:
 
@@ -35,10 +35,10 @@ Child variant
 
 ## Running the tests
 
-The test suite in `tests/test_trio_annotation.py` validates the core logic of the trio annotation module across three areas. `TestNormalizeVariant` exercises the `normalize_variant` function with a range of cases — SNVs, insertions, deletions, and variants requiring both prefix and suffix trimming — verifying that the standardized `(chr, pos, ref, alt)` tuple is produced correctly in each case. `TestNormalizeFromInput` confirms that `normalize_from_input` correctly delegates to `normalize_variant` using a `VariantAnnotationInput` object. `TestTrioAnnotation` covers the full inheritance classification logic, testing all four outcomes (`M`, `F`, `Both`, `De_Novo`) including edge cases such as variants that require normalization before matching, mismatches on chromosome or position, multiple child variants classified independently against the same parent sets, and parametrized checks across standard chromosomes (`chr1`, `chr10`, `chr20`, `chrX`, `chrY`).
+The test suite in `tests/test_pedigree_annotation.py` validates the core logic of the pedigree annotation module across three areas. `TestNormalizeVariant` exercises the `normalize_variant` function with a range of cases — SNVs, insertions, deletions, and variants requiring both prefix and suffix trimming — verifying that the standardized `(chr, pos, ref, alt)` tuple is produced correctly in each case. `TestNormalizeFromInput` confirms that `normalize_from_input` correctly delegates to `normalize_variant` using a `VariantAnnotationInput` object. `TestPedigreeAnnotation` covers the full inheritance classification logic via the `classify` function, testing all four outcomes (`M`, `F`, `Both`, `De_Novo`) including edge cases such as variants that require normalization before matching, mismatches on chromosome or position, multiple child variants classified independently against the same parent sets, and parametrized checks across standard chromosomes (`chr1`, `chr10`, `chr20`, `chrX`, `chrY`).
 
 From the project root:
 
 ```bash
-python3 -m pytest tests/test_trio_annotation.py -v
+python3 -m pytest tests/test_pedigree_annotation.py -v
 ```
