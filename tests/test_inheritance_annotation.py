@@ -1,5 +1,5 @@
 import pytest
-from varscore.pedigree_annotaion import classify, VariantAnnotationInput, normalize_variant, normalize_from_input
+from varscore.inheritance_annotation import classify, VariantAnnotationInput, normalize_variant, normalize_from_input
 
 
 def _make(chrom, pos, ref, alt):
@@ -59,7 +59,7 @@ class TestNormalizeFromInput:
 
 
 # ---------------------------------------------------------------------------
-# pedigree_annotation — inheritance classification
+# inheritance_annotation — inheritance classification
 # ---------------------------------------------------------------------------
 
 class TestPedigreeAnnotation:

@@ -114,13 +114,13 @@ def _parse_args():
         "-v", "--coding_variants_loc", required=True, help="Input TSV file (no header, columns: chr, pos, ref, alt)"
     )
     parser.add_argument(
+        "-o", "--out_path", required=True, help="Output tsv file with annotations"
+    )
+    parser.add_argument(
         "-m", "--maternal_variants_loc", required=False, help="Input TSV file (no header, columns: chr, pos, ref, alt)"
     )
     parser.add_argument(
         "-p", "--paternal_variants_loc", required=False, help="Input TSV file (no header, columns: chr, pos, ref, alt)"
-    )
-    parser.add_argument(
-        "-o", "--out_path", required=True, help="Output tsv file with annotations"
     )
     return parser.parse_args()
 
@@ -128,5 +128,5 @@ if __name__ == "__main__":
     main()
 
 """
-python -m varscore.pedigree_annotaion -v coding_variants.tsv -m maternal_variants.tsv -p paternal_variants.tsv -o pedigree_annotation.tsv
+python -m varscore.inheritance_annotation -v coding_variants.tsv -o inheritance_annotation.tsv -m maternal_variants.tsv -p paternal_variants.tsv 
 """
