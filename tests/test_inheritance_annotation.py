@@ -1,9 +1,19 @@
 import pytest
-from varscore.inheritance_annotation import classify, VariantAnnotationInput, normalize_variant, normalize_from_input
+from varscore.inheritance_annotation import classify, VariantAnnotationInput, normalize_variant, normalize_from_input, decompose_mnp
 
 
 def _make(chrom, pos, ref, alt):
     return VariantAnnotationInput(chr=chrom, pos=pos, ref=ref, alt=alt)
+
+
+def _build_set(variants):
+    """Build a normalized+decomposed parent lookup set from a list of VariantAnnotationInput."""
+    result = set()
+    for v in variants:
+        norm = normalize_from_input(v)
+        result.add(norm)
+        result.update(decompose_mnp(*norm))
+    return result
 
 
 def _classify(child, maternal, paternal):
@@ -12,9 +22,7 @@ def _classify(child, maternal, paternal):
         maternal = [maternal]
     if not isinstance(paternal, list):
         paternal = [paternal]
-    maternal_norm = {normalize_from_input(v) for v in maternal}
-    paternal_norm = {normalize_from_input(v) for v in paternal}
-    return classify(child, maternal_norm, paternal_norm)
+    return classify(child, _build_set(maternal), _build_set(paternal))
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +64,36 @@ class TestNormalizeFromInput:
     def test_delegates_to_normalize_variant(self):
         v = VariantAnnotationInput(chr="chr2", pos=500, ref="AGT", alt="AT")
         assert normalize_from_input(v) == normalize_variant("chr2", 500, "AGT", "AT")
+
+
+# ---------------------------------------------------------------------------
+# decompose_mnp  (pure function — no mocking needed)
+# ---------------------------------------------------------------------------
+
+class TestDecomposeMnp:
+    def test_snv_returns_empty(self):
+        assert decompose_mnp("chr1", 100, "A", "T") == []
+
+    def test_indel_returns_empty(self):
+        assert decompose_mnp("chr1", 100, "A", "ATG") == []
+        assert decompose_mnp("chr1", 100, "ATG", "A") == []
+
+    def test_two_base_mnp_all_different(self):
+        result = decompose_mnp("chr1", 1, "TA", "CG")
+        assert set(result) == {("chr1", 1, "T", "C"), ("chr1", 2, "A", "G")}
+
+    def test_three_base_mnp(self):
+        result = decompose_mnp("chr1", 1, "TAC", "CGT")
+        assert set(result) == {("chr1", 1, "T", "C"), ("chr1", 2, "A", "G"), ("chr1", 3, "C", "T")}
+
+    def test_mnp_with_shared_position(self):
+        # Middle base identical: only flanking positions emitted
+        result = decompose_mnp("chr1", 10, "TAT", "CAT")
+        assert result == [("chr1", 10, "T", "C")]
+
+    def test_all_identical_returns_empty(self):
+        # ref == alt at every position — no real changes
+        assert decompose_mnp("chr1", 10, "AA", "AA") == []
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +156,51 @@ class TestPedigreeAnnotation:
         child = _make(chrom, 500, "G", "C")
         mother = _make(chrom, 500, "G", "C")
         father = _make(chrom, 500, "G", "T")
+        assert _classify(child, mother, father) == "M"
+
+    def test_mnp_subset_maternal(self):
+        """Child SNV matching one position of a mother MNP counts as maternal."""
+        child = _make("chr1", 2, "A", "G")
+        mother = _make("chr1", 1, "TA", "CG")   # decomposes to chr1:1 T→C, chr1:2 A→G
+        father = _make("chr1", 5, "C", "T")
+        assert _classify(child, mother, father) == "M"
+
+    def test_mnp_subset_paternal(self):
+        child = _make("chr1", 1, "T", "C")
+        mother = _make("chr1", 5, "G", "A")
+        father = _make("chr1", 1, "TA", "CG")   # decomposes to chr1:1 T→C, chr1:2 A→G
+        assert _classify(child, mother, father) == "F"
+
+    def test_mnp_subset_both_parents(self):
+        child = _make("chr1", 2, "A", "G")
+        mother = _make("chr1", 1, "TA", "CG")
+        father = _make("chr1", 1, "TA", "CG")
+        assert _classify(child, mother, father) == "Both"
+
+    def test_mnp_exact_match_still_works(self):
+        child = _make("chr1", 1, "TA", "CG")
+        mother = _make("chr1", 1, "TA", "CG")
+        father = _make("chr1", 5, "C", "T")
+        assert _classify(child, mother, father) == "M"
+
+    def test_mnp_outside_range_is_de_novo(self):
+        child = _make("chr1", 5, "A", "G")
+        mother = _make("chr1", 1, "TA", "CG")
+        father = _make("chr1", 1, "TA", "CG")
+        assert _classify(child, mother, father) == "De_Novo"
+
+    def test_three_base_mnp_subset(self):
+        """Child SNV matching middle position of a 3-base MNP."""
+        child = _make("chr1", 2, "A", "G")
+        mother = _make("chr1", 1, "TAC", "CGT")  # pos1:T→C, pos2:A→G, pos3:C→T
+        father = _make("chr1", 9, "G", "T")
+        assert _classify(child, mother, father) == "M"
+
+    def test_indel_not_decomposed_exact_match(self):
+        """Indels are not decomposed — exact match still works."""
+        child = _make("chr1", 1, "A", "ATG")
+        mother = _make("chr1", 1, "A", "ATG")
+        father = _make("chr1", 5, "C", "T")
         assert _classify(child, mother, father) == "M"
 
     def test_multiple_children_classified_individually(self):

@@ -35,6 +35,22 @@ def normalize_from_input(variant:VariantAnnotationInput) -> tuple:
     """Normalize a variant object with .chr, .pos, .ref, .alt attributes."""
     return normalize_variant(variant.chr, variant.pos, variant.ref, variant.alt)
 
+
+def decompose_mnp(chrom: str, pos: int, ref: str, alt: str) -> list[tuple]:
+    """Return one atomic (chrom, pos, r, a) SNV per differing position in an MNP.
+
+    Returns [] for SNVs (len==1) and indels (len(ref) != len(alt)) — only MNPs
+    with len > 1 and equal lengths are decomposed.
+    """
+    if len(ref) != len(alt) or len(ref) == 1:
+        return []
+    return [
+        (chrom, pos + i, r, a)
+        for i, (r, a) in enumerate(zip(ref, alt))
+        if r != a
+    ]
+
+
 def classify(
     variants_char: VariantAnnotationInput,
     maternal_variants_norm: Optional[Set[tuple]],
@@ -77,10 +93,12 @@ def annotate(
         if path is None:
             return None
         df = pd.read_csv(path, sep='\t', header=None, names=["chr", "pos", "ref", "alt"])
-        return {
-            normalize_variant(row.chr, row.pos, row.ref, row.alt)
-            for row in df.itertuples(index=False)
-        }
+        result = set()
+        for row in df.itertuples(index=False):
+            norm = normalize_variant(row.chr, row.pos, row.ref, row.alt)
+            result.add(norm)
+            result.update(decompose_mnp(*norm))
+        return result
 
     maternal_norm_set = build_norm_set(maternal_variants_loc)
     paternal_norm_set = build_norm_set(paternal_variants_loc)

@@ -11,3 +11,4 @@ ccres.dnatree
 *.gz
 *.bw
 *.tbi
+tmp/
