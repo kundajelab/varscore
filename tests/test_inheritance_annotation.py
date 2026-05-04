@@ -1,6 +1,6 @@
 import pytest
-from varscore.inheritance_annotation import classify, VariantAnnotationInput, normalize_variant, normalize_from_input, decompose_mnp
-
+from varscore.inheritance_annotation.inheritance_annotation import classify, normalize_variant, normalize_from_input, decompose_mnp
+from varscore.annotations import VariantAnnotationInput
 
 def _make(chrom, pos, ref, alt):
     return VariantAnnotationInput(chr=chrom, pos=pos, ref=ref, alt=alt)
