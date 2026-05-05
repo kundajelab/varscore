@@ -140,5 +140,5 @@ if __name__ == "__main__":
     main()
 
 """
-python -m varscore.inheritance_annotation -v coding_variants.tsv -o inheritance_annotation.tsv -m maternal_variants.tsv -p paternal_variants.tsv 
+python -m varscore.inheritance_annotation.annotate -v coding_variants.tsv -o inheritance_annotation.tsv -m maternal_variants.tsv -p paternal_variants.tsv 
 """
