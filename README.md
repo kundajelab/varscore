@@ -41,6 +41,11 @@ uv run python -m varscore.scripts.construct_variants_df
 ```
 
 
+## Documentation
+
+- [AlphaMissense](docs/alphamissense.md) — setup and variant scoring
+
+
 ## Building Docker
 
 Build:
