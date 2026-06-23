@@ -32,6 +32,7 @@ class AnnotatedVariant(BaseModel):
     region_labels: List[str]    # all overlapping region labels (multi-label)
     region_gene_ids: List[str]  # genes the variant overlaps
     is_coding: bool             # overlaps a CDS
+    in_promoter: bool           # overlaps a promoter window (any gene)
     nearest_genes: List[region_utils.GeneAnnotation]
     gene_within_100kb: bool
     ccre_id: Optional[str]
@@ -175,6 +176,7 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
         region_labels=var_region.labels,
         region_gene_ids=var_region.gene_ids,
         is_coding=var_region.is_coding,
+        in_promoter=var_region.in_promoter,
         nearest_genes=var_nearest_genes,
         gene_within_100kb=var_gene_within_100kb,
         ccre_id=var_ccre_id,

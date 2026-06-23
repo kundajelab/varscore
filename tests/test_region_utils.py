@@ -85,6 +85,23 @@ def test_batch_alignment_and_intergenic():
     assert res[1].gene_ids == []
 
 
+def test_in_promoter_independent_of_primary():
+    # TSS-proximal variant: in the promoter window AND the first exon. `primary`
+    # collapses to the more-severe "exonic", but in_promoter must still be True
+    # (this is what the prioritization filter gates on, not region_type).
+    idx = _index([
+        ("chr1", 100, 300, "promoter", "protein_coding", "G1"),
+        ("chr1", 250, 400, "exon", "protein_coding", "G1"),
+    ])
+    ann = idx.annotate(["chr1"], [275], [275])[0]
+    assert set(ann.labels) == {"promoter", "exonic"}
+    assert ann.primary == "exonic"      # severity collapse hides promoter
+    assert ann.in_promoter is True      # membership flag does not
+    # purely upstream position: promoter only
+    upstream = idx.annotate(["chr1"], [150], [150])[0]
+    assert upstream.primary == "promoter" and upstream.in_promoter is True
+
+
 def test_indel_span_overlap():
     # A deletion spanning into an exon should be caught via its [start, end] span.
     idx = _index([("chr1", 100, 200, "cds", "protein_coding", "G1")])

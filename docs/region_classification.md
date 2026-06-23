@@ -83,7 +83,8 @@ ann = region_annotations("chr1", 69094, 69094)
 ann.labels      # e.g. ["cds", "exonic"]  (severity-ordered)
 ann.gene_ids    # overlapping gene IDs (multi-gene aware)
 ann.primary     # "cds"  -> most-severe single label
-ann.is_coding   # True   -> overlaps a CDS
+ann.is_coding   # True   -> overlaps a CDS (routes to AlphaMissense)
+ann.in_promoter # False  -> overlaps a promoter window (used by prioritization)
 
 # Annotate a whole variant set in one vectorized pass:
 anns = region_annotations_batch(df["chr"], df["pos"], df["pos"])

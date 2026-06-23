@@ -92,6 +92,7 @@ REGION_LABELS_BY_SEVERITY = [
     "intergenic",
 ]
 _CODING_LABEL = "cds"
+_PROMOTER_LABEL = "promoter"
 
 # Map raw annotation-table feature types -> emitted region label(s).
 def _labels_for_feature(feature, biotype):
@@ -112,6 +113,10 @@ class RegionAnnotation(BaseModel):
     @property
     def is_coding(self) -> bool:
         return _CODING_LABEL in self.labels
+
+    @property
+    def in_promoter(self) -> bool:
+        return _PROMOTER_LABEL in self.labels
 
 
 class _RegionIndex:
