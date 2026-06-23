@@ -15,6 +15,7 @@ def variant_score_db_reformat(variant_score_db: pd.DataFrame) -> pd.DataFrame:
         # "variant_length",
         # "variant_type",
         "region_type",
+        "in_promoter",
         # "nearest_genes",
         # "gene_within_100kb",
     ]
@@ -45,7 +46,7 @@ def prioritize_variants(
             (np.abs(variants_df[f"logfc_{m}"]) >= 0.25)
             & (variants_df[f"active_allele_quantile_{m}"] >= 0.05)
             & (
-                (variants_df["region_type"] == "promoter")
+                (variants_df["in_promoter"] == True)
                 | (variants_df[f"in_peak_{m}"] == True)
                 | (
                     (variants_df[f"in_peak_{m}"] == False)
@@ -94,6 +95,9 @@ if __name__ == "__main__":
         "exonic",
         "exonic",
     ]
+    # in_promoter is the membership flag the filter actually gates on; note the
+    # last two rows are exonic *and* in a promoter, which region_type alone hides.
+    df["in_promoter"] = [True, False, True, False, True, True]
     df["nearest_genes"] = [1, 1, 1, 1, 1, 1]
     df["gene_within_100kb"] = [1, 1, 1, 1, 1, 1]
     df["logfc"] = [1, -1, 2, -2, 4, 3]

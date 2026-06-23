@@ -1,6 +1,9 @@
 *.egg-info
 __pycache__
 .venv
+
+# Agent-first plan/impl workspace (not committed; polished versions live in docs/)
+ai_docs/
 dist/
 *.pyc
 plot_dir*/
@@ -8,6 +11,7 @@ raw/
 
 # Large files
 ccres.dnatree
+region_annotations.parquet
 *.gz
 *.bw
 *.tbi
