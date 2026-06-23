@@ -50,7 +50,7 @@ Window definitions (constants in
 |---|---|
 | `splice_donor` / `splice_acceptor` | 2 bp intronic (canonical, VEP definition) |
 | `splice_region` | 8 bp intronic + 3 bp exonic around each exon boundary |
-| `promoter` | 2000 bp upstream / 200 bp downstream of the TSS |
+| `promoter` | 500 bp upstream / 100 bp downstream of the TSS |
 
 ## Labels
 
@@ -92,6 +92,46 @@ anns = region_annotations_batch(df["chr"], df["pos"], df["pos"])
 
 `region_type()` is retained only for back-compatibility (returns `.primary`);
 new code should use `region_annotations[_batch]` to get the full label set.
+
+## Routing variants to scorers
+
+[variant_region_filter.py](../varscore/variant_region_filter.py) uses these
+labels to split a variant file into per-category TSVs, one per region kind, so
+each can feed the right scorer:
+
+```bash
+uv run python -m varscore.variant_region_filter -v variants.tsv -o regions/
+```
+
+Routing is **membership-based and overlapping** — a variant is written to every
+category whose labels it carries, so it can appear in several files at once (a
+CDS-edge SNV lands in `coding`, `exonic`, `splice`, `splice_site`,
+`splice_region`, and `genic`). Each file is a bare, headerless variant TSV,
+i.e. a drop-in input to the per-scorer entrypoints.
+
+Categories written (all except `intergenic` by default; restrict with
+`--categories`):
+
+| File | Membership | Typical scorer |
+|---|---|---|
+| `coding.tsv` | overlaps a CDS | AlphaMissense |
+| `exonic.tsv` | protein-coding exon (cds ∪ UTRs) | — |
+| `five_prime_utr.tsv` / `three_prime_utr.tsv` | UTR | — |
+| `splice.tsv` | splice site **or** region | SpliceAI |
+| `splice_site.tsv` | canonical ±2 bp donor/acceptor | SpliceAI |
+| `splice_region.tsv` | ±8 intron / ±3 exon window | SpliceAI |
+| `intronic.tsv` | intron body | chromatin models |
+| `promoter.tsv` | promoter window | chromatin models |
+| `noncoding_gene.tsv` | lncRNA/miRNA/etc exon | — |
+| `genic.tsv` | any gene-body label (excludes promoter, intergenic) | SpliceAI (broad) |
+| `intergenic.tsv` | no annotated overlap (opt-in) | — |
+
+There is intentionally **no `noncoding` category**: "not coding" is ambiguous
+under multi-transcript union (a variant can be CDS in one transcript and
+intronic/UTR in another), and it's the wrong axis for chromatin models like
+ChromBPNet, which score *any* locus — coding included. Feed those models the
+**full variant set**, not a region subset; use the categories above only to
+route the scorers that need it (CDS → AlphaMissense, splice → SpliceAI).
 
 ## Implementation notes
 

@@ -1,7 +1,8 @@
 """This module handles variant preprocessing functional flows.
 
-It takes in a variants TSV file and a genome FASTA file and creates valid, invalid, coding, and non-coding
-variant TSV files.
+It takes in a variants TSV file and a genome FASTA file, creates valid/invalid
+variant TSV files, then routes the valid variants into per-region-category TSV
+files (coding, splice, promoter, intronic, ...) for downstream scoring.
 """
 
 import argparse
@@ -18,8 +19,8 @@ def preprocess_variants(
     genome_loc: str,
     valid_out_path: str,
     invalid_out_path: str,
-    coding_out_path: str,
-    noncoding_out_path: str,
+    region_out_dir: str,
+    categories=None,
 ) -> None:
     """Preprocess variants through validation and region filtering.
 
@@ -28,8 +29,8 @@ def preprocess_variants(
         genome_loc: Path to genome FASTA file.
         valid_out_path: Output path for valid variants.
         invalid_out_path: Output path for invalid variants.
-        coding_out_path: Output path for coding (exonic) variants.
-        noncoding_out_path: Output path for non-coding variants.
+        region_out_dir: Directory for the per-region-category variant TSVs.
+        categories: Optional subset of region categories to emit (default: all).
     """
     logger.info("Starting variant preprocessing.")
 
@@ -48,15 +49,14 @@ def preprocess_variants(
 
     if not valid_df.empty:
         logger.info("Filtering %d valid variants by region.", len(valid_df))
-        coding_df, noncoding_df = filter_variants_by_region(
+        counts = filter_variants_by_region(
             valid_out_path,
-            coding_out_path,
-            noncoding_out_path,
+            region_out_dir,
+            categories,
         )
         logger.info(
-            "Region filtering complete: %d coding, %d non-coding variants.",
-            len(coding_df),
-            len(noncoding_df),
+            "Region filtering complete: %s.",
+            ", ".join(f"{cat}={n}" for cat, n in counts.items()),
         )
     else:
         logger.warning("No valid variants to filter by region.")
@@ -64,13 +64,16 @@ def preprocess_variants(
 
 def main():
     args = _parse_args()
+    categories = (
+        [c.strip() for c in args.categories.split(",")] if args.categories else None
+    )
     preprocess_variants(
         args.input,
         args.genome,
         args.valid_out,
         args.invalid_out,
-        args.coding_out,
-        args.noncoding_out,
+        args.region_out_dir,
+        categories,
     )
 
 
@@ -95,12 +98,12 @@ def _parse_args():
         help="Output path for invalid variants.",
     )
     parser.add_argument(
-        "--coding-out", dest="coding_out", required=True,
-        help="Output path for coding (exonic) variants.",
+        "--region-out-dir", dest="region_out_dir", required=True,
+        help="Directory for per-region-category variant TSVs (coding, splice, ...).",
     )
     parser.add_argument(
-        "--noncoding-out", dest="noncoding_out", required=True,
-        help="Output path for non-coding variants.",
+        "--categories",
+        help="Comma-separated subset of region categories to emit (default: all).",
     )
     return parser.parse_args()
 

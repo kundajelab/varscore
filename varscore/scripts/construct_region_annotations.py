@@ -27,8 +27,8 @@ import pandas as pd
 SPLICE_SITE_BP = 2        # canonical donor/acceptor (intronic) — VEP definition
 SPLICE_REGION_INTRON_BP = 8
 SPLICE_REGION_EXON_BP = 3
-PROMOTER_UPSTREAM = 2000
-PROMOTER_DOWNSTREAM = 200
+PROMOTER_UPSTREAM = 500
+PROMOTER_DOWNSTREAM = 100
 
 # Standard Ensembl seqids -> UCSC-style chrom names used elsewhere in varscore.
 _STD_CHROMS = {str(i): f"chr{i}" for i in range(1, 23)}
