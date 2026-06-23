@@ -28,7 +28,10 @@ class AnnotatedVariant(BaseModel):
     alt_length: int
     variant_length: int
     variant_type: str
-    region_type: str
+    region_type: str            # most-severe single label (back-compat)
+    region_labels: List[str]    # all overlapping region labels (multi-label)
+    region_gene_ids: List[str]  # genes the variant overlaps
+    is_coding: bool             # overlaps a CDS
     nearest_genes: List[region_utils.GeneAnnotation]
     gene_within_100kb: bool
     ccre_id: Optional[str]
@@ -145,9 +148,7 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
 
     var_start = var_pos
     var_end = var_pos + var_ref_length - 1
-    var_region_type = region_utils.region_type(
-        var_chr, var_start, var_end
-    )
+    var_region = region_utils.region_annotations(var_chr, var_start, var_end)
     var_nearest_genes, var_gene_within_100kb = region_utils.nearest_genes(
         var_chr, var_pos, num_genes=5
     )
@@ -170,7 +171,10 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
         alt_length=var_alt_length,
         variant_length=var_variant_length,
         variant_type=var_variant_type,
-        region_type=var_region_type,
+        region_type=var_region.primary,
+        region_labels=var_region.labels,
+        region_gene_ids=var_region.gene_ids,
+        is_coding=var_region.is_coding,
         nearest_genes=var_nearest_genes,
         gene_within_100kb=var_gene_within_100kb,
         ccre_id=var_ccre_id,

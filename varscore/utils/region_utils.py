@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import List, Tuple
 from intervaltree import IntervalTree
+from ncls import NCLS
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel
@@ -69,32 +70,134 @@ class DNATree:
 ###############
 # REGION TYPE #
 ###############
-# Lazy-loaded DNATrees (loaded on first use)
+# Region classification is a vectorized interval-overlap join against a flat
+# annotation table (varscore/data/region_annotations.parquet, built by
+# scripts/construct_region_annotations.py). See docs/region_classification.md.
+#
+# A variant can carry MULTIPLE region labels at once (e.g. a coding exon base
+# that is also a splice site). `region_annotations()` returns the full set;
+# `region_type()` is a back-compat shim returning the single most-severe label.
 
-@lru_cache(maxsize=1)
-def _get_promoter_dnatree():
-    print("Loading Promoter DNATree ...")
-    return loadDNATree(
-        os.path.join(
-            os.path.dirname(__file__), "..", "data", "promoters_proteincoding.dnatree"
+# Final labels, ordered most -> least severe for the single-label collapse.
+REGION_LABELS_BY_SEVERITY = [
+    "splice_site",
+    "cds",
+    "splice_region",
+    "five_prime_utr",
+    "three_prime_utr",
+    "exonic",
+    "noncoding_gene",
+    "intronic",
+    "promoter",
+    "intergenic",
+]
+_CODING_LABEL = "cds"
+
+# Map raw annotation-table feature types -> emitted region label(s).
+def _labels_for_feature(feature, biotype):
+    if feature == "exon":
+        return ("exonic",) if biotype == "protein_coding" else ("noncoding_gene",)
+    if feature in ("splice_donor", "splice_acceptor"):
+        return ("splice_site", "splice_region")
+    if feature == "intron":
+        return ("intronic",)
+    return (feature,)  # cds / five_prime_utr / three_prime_utr / splice_region / promoter
+
+
+class RegionAnnotation(BaseModel):
+    labels: List[str]      # all overlapped region labels, sorted by severity
+    gene_ids: List[str]    # gene ids the variant overlaps (multi-gene aware)
+    primary: str           # most-severe single label (display / back-compat)
+
+    @property
+    def is_coding(self) -> bool:
+        return _CODING_LABEL in self.labels
+
+
+class _RegionIndex:
+    """Per-chromosome NCLS index over the region-annotation interval table.
+
+    Intervals in the table are 1-based, endpoint-inclusive; NCLS uses half-open
+    [start, end), so ends are stored (and queried) as end + 1.
+    """
+
+    def __init__(self, table: pd.DataFrame):
+        self._ncls = {}
+        self._feature = {}
+        self._biotype = {}
+        self._gene_id = {}
+        for chrom, g in table.groupby("chrom", sort=False):
+            g = g.reset_index(drop=True)
+            starts = g["start"].to_numpy(np.int64)
+            ends = g["end"].to_numpy(np.int64) + 1  # inclusive -> half-open
+            self._ncls[chrom] = NCLS(starts, ends, np.arange(len(g), dtype=np.int64))
+            self._feature[chrom] = g["feature"].to_numpy()
+            self._biotype[chrom] = g["biotype"].to_numpy()
+            self._gene_id[chrom] = g["gene_id"].to_numpy()
+
+    def _annotation_from_hits(self, chrom, target_ids) -> RegionAnnotation:
+        feats = self._feature[chrom][target_ids]
+        biots = self._biotype[chrom][target_ids]
+        genes = self._gene_id[chrom][target_ids]
+        labels = set()
+        for f, b in zip(feats, biots):
+            labels.update(_labels_for_feature(f, b))
+        ordered = [l for l in REGION_LABELS_BY_SEVERITY if l in labels]
+        gene_ids = sorted({g for g in genes if isinstance(g, str)})
+        return RegionAnnotation(
+            labels=ordered or ["intergenic"],
+            gene_ids=gene_ids,
+            primary=ordered[0] if ordered else "intergenic",
         )
-    )
+
+    def annotate(self, chroms, starts, ends) -> List[RegionAnnotation]:
+        """Vectorized lookup; returns a RegionAnnotation per input interval."""
+        chroms = np.asarray(chroms, dtype=object)
+        starts = np.asarray(starts, dtype=np.int64)
+        ends = np.asarray(ends, dtype=np.int64) + 1  # inclusive -> half-open
+        n = len(chroms)
+        intergenic = RegionAnnotation(labels=["intergenic"], gene_ids=[], primary="intergenic")
+        results = [intergenic] * n
+        order = np.arange(n)
+        for chrom in pd.unique(chroms):
+            ncls = self._ncls.get(chrom)
+            if ncls is None:
+                continue
+            sel = order[chroms == chrom]
+            q_idx, t_idx = ncls.all_overlaps_both(
+                starts[sel], ends[sel], np.arange(len(sel), dtype=np.int64)
+            )
+            if len(q_idx) == 0:
+                continue
+            # Group target rows by query position, then build one annotation each.
+            sort = np.argsort(q_idx, kind="stable")
+            q_sorted, t_sorted = q_idx[sort], t_idx[sort]
+            bounds = np.searchsorted(q_sorted, np.unique(q_sorted))
+            for k, q in enumerate(np.unique(q_sorted)):
+                lo = bounds[k]
+                hi = bounds[k + 1] if k + 1 < len(bounds) else len(q_sorted)
+                results[sel[q]] = self._annotation_from_hits(chrom, t_sorted[lo:hi])
+        return results
 
 
 @lru_cache(maxsize=1)
-def _get_gene_dnatree():
-    print("Loading Gene DNATree ...")
-    return loadDNATree(
-        os.path.join(os.path.dirname(__file__), "..", "data", "genes_proteincoding.dnatree")
+def _get_region_index():
+    print("Loading region annotations ...")
+    path = os.path.join(
+        os.path.dirname(__file__), "..", "data", "region_annotations.parquet"
     )
-
-
-@lru_cache(maxsize=1)
-def _get_exon_dnatree():
-    print("Loading Exon DNATree ...")
-    return loadDNATree(
-        os.path.join(os.path.dirname(__file__), "..", "data", "exons_proteincoding.dnatree")
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            "region_annotations.parquet not found. Build it with "
+            "scripts/download_ensembl_gff.sh + scripts/construct_region_annotations.py "
+            "(see docs/region_classification.md)."
+        )
+    table = pd.read_parquet(
+        path, columns=["chrom", "start", "end", "feature", "biotype", "gene_id"]
     )
+    for col in ("feature", "biotype", "gene_id"):
+        table[col] = table[col].astype("category")  # dedupe strings to cut memory
+    return _RegionIndex(table)
 
 
 @lru_cache(maxsize=1)
@@ -105,14 +208,19 @@ def _get_ccre_dnatree():
         raise FileNotFoundError(f"CCRE DNATree file not found. Please see the README for instructions on how to construct the DNATree.")
     return loadDNATree(filepath)
 
-def region_type(chro, start, end):
-    if _get_promoter_dnatree().overlap(chro, start, end) is not None:
-        return "promoter"
-    elif _get_exon_dnatree().overlap(chro, start, end) is not None:
-        return "exonic"
-    elif _get_gene_dnatree().overlap(chro, start, end) is not None:
-        return "intronic"
-    return "intergenic"
+def region_annotations(chro, start, end) -> RegionAnnotation:
+    """Full multi-label region annotation for a single interval (1-based, incl)."""
+    return _get_region_index().annotate([chro], [start], [end])[0]
+
+
+def region_annotations_batch(chroms, starts, ends) -> List[RegionAnnotation]:
+    """Vectorized region annotation for many intervals; aligned to input order."""
+    return _get_region_index().annotate(chroms, starts, ends)
+
+
+def region_type(chro, start, end) -> str:
+    """Back-compat single-label classification (most-severe label)."""
+    return region_annotations(chro, start, end).primary
 
 
 ################

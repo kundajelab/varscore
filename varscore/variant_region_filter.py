@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import argparse
 import os
 from typing import Tuple, Optional
@@ -113,39 +114,33 @@ def filter_variants_by_region(
 
 
 def _filter_batch_by_region(batch_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Filter a batch of variants by region type.
-    
+    """Filter a batch of variants into coding (CDS) and non-coding categories.
+
+    Coding = the variant overlaps a CDS (protein-altering territory, routed to
+    AlphaMissense). Non-coding = it overlaps some other gene/regulatory region
+    (UTR, splice, intron, promoter, non-coding-gene exon) but no CDS. Purely
+    intergenic variants are excluded from both outputs.
+
     Args:
-        batch_df: DataFrame with variant information
-        
+        batch_df: DataFrame with variant information (chr, pos, ref columns)
+
     Returns:
         Tuple of (coding_variants_df, noncoding_variants_df)
     """
-    coding_variants = []
-    noncoding_variants = []
-    
-    for idx, row in batch_df.iterrows():
-        chro = row["chr"]
-        pos = int(row["pos"])  # 1-based position
-        ref = row["ref"]
-        
-        # Calculate variant region (1-based, inclusive)
-        var_start = pos
-        var_end = pos + len(ref) - 1
-        
-        # Determine region type
-        region = region_utils.region_type(chro, var_start, var_end)
-        
-        # Classify as coding (exonic) or non-coding (promoter + intronic)
-        if region == "exonic":
-            coding_variants.append(row)
-        else:
-            noncoding_variants.append(row)
-        # Note: intergenic variants are excluded (not in coding or non-coding categories)
-    
-    coding_df = pd.DataFrame(coding_variants) if coding_variants else pd.DataFrame()
-    noncoding_df = pd.DataFrame(noncoding_variants) if noncoding_variants else pd.DataFrame()
-    
+    if batch_df.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    chroms = batch_df["chr"].to_numpy()
+    starts = batch_df["pos"].astype(int).to_numpy()  # 1-based
+    ends = starts + batch_df["ref"].astype(str).str.len().to_numpy() - 1
+
+    # One vectorized overlap join for the whole batch (no per-row Python loop).
+    annotations = region_utils.region_annotations_batch(chroms, starts, ends)
+    is_coding = np.array([a.is_coding for a in annotations])
+    in_region = np.array([a.primary != "intergenic" for a in annotations])
+
+    coding_df = batch_df[is_coding]
+    noncoding_df = batch_df[in_region & ~is_coding]
     return coding_df, noncoding_df
 
 
