@@ -1,9 +1,59 @@
-# def test_varscore_exposes_add_n_closest_elements():
-#     import varscore
+"""Smoke tests for the package's public surface and the lightweight install path.
 
-#     # Check if the function exists in the package namespace
-#     assert hasattr(varscore, "add_n_closest_elements"), "add_n_closest_elements is not exposed in varscore"
-    
-#     # Optionally, check the function's type
-#     from types import FunctionType
-#     assert isinstance(varscore.add_n_closest_elements, FunctionType), "add_n_closest_elements is not a function"
+These guard two productionization invariants:
+  1. Every core (TensorFlow-free) module imports cleanly.
+  2. Importing the core API does not drag in the heavy `[model]` (TensorFlow)
+     stack.
+
+The companion `package` CI job additionally builds a wheel and runs equivalent
+checks against a *clean install*, which is what catches missing-subpackage
+packaging regressions that a source-tree run cannot.
+"""
+
+import importlib
+import sys
+
+import pytest
+
+CORE_MODULES = [
+    "varscore",
+    "varscore.annotations",
+    "varscore.prioritization",
+    "varscore.validate_variants",
+    "varscore.variant_preprocessing",
+    "varscore.variant_region_filter",
+    "varscore.alphamissense_scoring",
+    "varscore.scoring",
+    "varscore.utils.region_utils",
+    "varscore.utils.io_utils",
+    "varscore.utils.variant_utils",
+    "varscore.utils.alphamissense_utils",
+]
+
+PUBLIC_API = [
+    "__version__",
+    "annotate_variant",
+    "annotate_variants",
+    "AnnotatedVariant",
+    "VariantAnnotationInput",
+    "prioritize_variants",
+]
+
+
+@pytest.mark.parametrize("module", CORE_MODULES)
+def test_core_module_imports(module):
+    importlib.import_module(module)
+
+
+def test_public_api_is_exported():
+    import varscore
+
+    for name in PUBLIC_API:
+        assert hasattr(varscore, name), f"varscore.{name} is missing from the public API"
+
+
+def test_core_import_is_tensorflow_free():
+    # Importing the whole core surface must not pull in TensorFlow.
+    for module in CORE_MODULES:
+        importlib.import_module(module)
+    assert "tensorflow" not in sys.modules, "TensorFlow leaked into the core import path"

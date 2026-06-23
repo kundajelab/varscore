@@ -1,10 +1,10 @@
 # USAGE:
-# docker build -t varscore-dev -f Dockerfile.lib .
-# docker run --rm $IMAGE_ID src.varscore.ingest_model
+# docker build -t kundajelab/varscore:dev -f Dockerfile .
+# docker run --rm kundajelab/varscore:dev varscore.ingest_model ...
 #
-# We use `uv` as a build tool only in dev. Here, to keep
-# the image size small, we install the dependencies 
-# directly from pip.
+# Model-scoring image. The TensorFlow/ChromBPNet stack comes from the
+# kundajelab/chrombpnet base image, so `pip install .` only needs to add the
+# lightweight varscore core deps on top (no `[model]` extra required here).
 # ------------------------------------------------
 
 # Use the official Python image as the base

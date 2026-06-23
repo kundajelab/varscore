@@ -1,7 +1,29 @@
 # VariantScoringFunctions
 Core functions for variant scoring
 
-## Installation
+## Installing the library
+
+The core library (variant annotation, region classification, AlphaMissense /
+parquet lookups, prioritization) is TensorFlow-free and installs on macOS arm64
+and modern Python:
+
+```bash
+pip install varscore
+```
+
+Heavy / platform-constrained functionality lives behind extras:
+
+```bash
+pip install "varscore[model]"         # ChromBPNet model scoring + SHAP (legacy TensorFlow stack; Python < 3.10)
+pip install "varscore[conservation]"  # CADD / PhyloP conservation lookups (pysam, pyBigWig)
+```
+
+Bulk reference data is **not** bundled — build it with the
+`varscore/scripts/download_*` + `construct_*` pairs (see below and the
+per-dataset docs). For environments that can't satisfy the model extra (e.g.
+Kubernetes), use the published Docker image instead (see *Building Docker*).
+
+## Development setup
 Make sure you have `uv` installed. See [here](https://docs.astral.sh/uv/) for installation instructions.
 
 ### Sync Dependencies

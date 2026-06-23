@@ -6,32 +6,23 @@ authors = [
 	{ name = "Salil Deshpande" },
 	{ name = "Riya Sinha" },
 ]
-version = "0.0.1a"
-requires-python = ">= 3.8, < 3.10"
+version = "0.0.1a1"
+requires-python = ">= 3.9, < 3.13"
+
+# Core dependencies: the lightweight annotation / region / lookup / prioritization
+# library. Deliberately TensorFlow-free so it installs on macOS arm64 and modern
+# Python where the old TF wheels don't exist. Heavy / platform-constrained deps
+# live in the optional extras below.
 dependencies = [
-	"deeplift==0.6.13.0",
 	"duckdb>=1.0.0",
-	"fastapi>=0.103.2",
 	"intervaltree>=3.1.0",
 	"ncls>=0.0.70",
-	"numpy==1.23.4",
+	"numpy>=1.23",
 	"pandas>=1.3.4",
-	# "polars==1.8.2",
-	# "protobuf<=3.20",
-	# "pybedtools==0.10.0",
-	"pyfaidx==0.6.1",
-	"kundajelab-shap==1",
-	"scipy==1.10.1",
-	# "tangermeme>=0.4.0",
-	"tensorflow==2.8.1",
-	"tensorflow-probability==0.14.0",
-	# "tf-keras>=2.15.0",
-	"uvicorn>=0.33.0",
-	# "python-snappy>=0.7.3",
 	"pyarrow>=17.0.0",
-	"pybigwig>=0.3.22",
-	"pysam>=0.22.1",
-	"modal>=0.65.66",
+	"pydantic>=2.0",
+	"pyfaidx>=0.6.1",
+	"scipy>=1.10",
 ]
 keywords = ["variant scoring", "variant effect", "variant prioritization", "variant", "scoring", "effect", "prioritization", "genomics", "chrombpnet"]
 
@@ -40,18 +31,38 @@ Repository = "https://github.com/kundajelab/varscore.git"
 Issues = "https://github.com/kundajelab/varscore/issues"
 
 [project.optional-dependencies]
-dev = [
-    "pytest",
+# ChromBPNet model scoring + SHAP interpretation. Pins the legacy TensorFlow
+# stack, which constrains this extra to Python < 3.10 / Linux. Install only where
+# you actually run the model: `pip install varscore[model]`.
+model = [
+	"tensorflow==2.8.1",
+	"tensorflow-probability==0.14.0",
+	"deeplift==0.6.13.0",
+	"kundajelab-shap==1",
+	"numpy<1.24",
+	"scipy==1.10.1",
+	"matplotlib>=3.5",
+]
+# Conservation-score lookups (CADD, PhyloP).
+conservation = [
+	"pysam>=0.22.1",
+	"pybigwig>=0.3.22",
 ]
 
 [build-system]
 requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["varscore"]
+[tool.setuptools.packages.find]
+include = ["varscore*"]
+exclude = ["tests*"]
 
+[tool.setuptools.package-data]
+varscore = ["data/gene_df.tsv"]
+
+# Dev tooling (uv-native; installed in CI via `uv sync --dev`).
 [dependency-groups]
 dev = [
-    "pytest>=8.3.4",
+	"pytest>=8.3.4",
+	"build>=1.2",
 ]

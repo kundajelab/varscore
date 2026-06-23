@@ -1,6 +1,6 @@
-name: Tests
+name: CI
 
-# Run tests on push to main branch and pull request to main branch
+# Run on push to main branch and pull request to main branch
 on:
   push:
     branches:
@@ -20,17 +20,52 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Install uv
       uses: astral-sh/setup-uv@v3
       with:
         version: "latest"
     - run: uv python install 3.9
-    
+
     - name: Install dependencies
       run: |
         uv sync --dev
-    
+
     - name: Run tests
       run: |
         uv run pytest
+
+  package:
+    # Validates that the built wheel is COMPLETE (ships every subpackage) and
+    # that the core install is TensorFlow-free and importable on every supported
+    # Python version. This is what catches packaging regressions (missing
+    # subpackages, accidental heavy-dep imports) that the source-tree tests miss.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    - run: uv python install ${{ matrix.python-version }}
+
+    - name: Build sdist + wheel
+      run: uv build
+
+    - name: Install built wheel into a clean env (core only, no extras)
+      run: |
+        uv venv --python ${{ matrix.python-version }} /tmp/clean
+        uv pip install --python /tmp/clean dist/*.whl
+
+    - name: Import core API and assert it is TensorFlow-free
+      run: |
+        /tmp/clean/bin/python -c "import varscore; print('varscore', varscore.__version__)"
+        /tmp/clean/bin/python -c "import varscore.annotations, varscore.prioritization, varscore.validate_variants, varscore.variant_region_filter, varscore.variant_preprocessing, varscore.alphamissense_scoring, varscore.scoring"
+        /tmp/clean/bin/python -c "import varscore.utils.region_utils, varscore.utils.io_utils, varscore.utils.variant_utils, varscore.utils.alphamissense_utils"
+        /tmp/clean/bin/python -c "import importlib.util, sys; assert importlib.util.find_spec('tensorflow') is None, 'TensorFlow leaked into the core install'; print('core install is TensorFlow-free')"
