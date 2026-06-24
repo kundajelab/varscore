@@ -21,16 +21,18 @@ def preprocess_variants(
     invalid_out_path: str,
     region_out_dir: str,
     categories=None,
+    fmt: str = "auto",
 ) -> None:
     """Preprocess variants through validation and region filtering.
 
     Args:
-        variants_loc: Path to input variants TSV file.
+        variants_loc: Path to input variants file (TSV or VCF/gVCF).
         genome_loc: Path to genome FASTA file.
         valid_out_path: Output path for valid variants.
         invalid_out_path: Output path for invalid variants.
         region_out_dir: Directory for the per-region-category variant TSVs.
         categories: Optional subset of region categories to emit (default: all).
+        fmt: Input format, one of "auto", "tsv", "vcf" (default: auto-detect).
     """
     logger.info("Starting variant preprocessing.")
 
@@ -39,6 +41,7 @@ def preprocess_variants(
         genome_loc,
         valid_out_path,
         invalid_out_path,
+        fmt=fmt,
     )
 
     logger.info(
@@ -74,6 +77,7 @@ def main():
         args.invalid_out,
         args.region_out_dir,
         categories,
+        args.format,
     )
 
 
@@ -83,7 +87,8 @@ def _parse_args():
     )
     parser.add_argument(
         "-i", "--input", required=True,
-        help="Input variants TSV file (chr, pos, ref, alt columns).",
+        help="Input variants file: canonical TSV (chr, pos, ref, alt[, variant_id]) "
+        "or VCF/gVCF (.vcf, .vcf.gz).",
     )
     parser.add_argument(
         "-g", "--genome", required=True,
@@ -104,6 +109,10 @@ def _parse_args():
     parser.add_argument(
         "--categories",
         help="Comma-separated subset of region categories to emit (default: all).",
+    )
+    parser.add_argument(
+        "-f", "--format", default="auto", choices=["auto", "tsv", "vcf"],
+        help="Input format (default: auto, detected by extension).",
     )
     return parser.parse_args()
 

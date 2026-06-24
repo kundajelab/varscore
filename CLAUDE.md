@@ -60,6 +60,14 @@ contract; a model scorer like `scoring/chrombpnet/` swaps the parquet lookup for
 
 - **Variant files:** headerless TSV, columns `chr, pos, ref, alt[, variant_id]`
   (`core.io.VARIANT_SCHEMA`). Scoring outputs append columns to these.
+- **VCF/gVCF input** is accepted at the entry point via
+  `preprocessing.vcf.read_variants(path, fmt="auto")` (and the `-f/--format` flag
+  on `validate`/`pipeline`), which converts to the canonical table above —
+  everything downstream is unchanged. Pure-Python (stdlib `gzip`, **no new dep**,
+  reads `.vcf`/`.vcf.gz`); splits multi-allelic sites and drops symbolic alleles
+  (`<NON_REF>`, `<*>`, `*`, breakends). No `.bcf`. The VCF `ID` is captured into
+  `variant_id`, but full end-to-end ID preservation is still gated on the
+  `variant_id` drop in `validate.py` — see `docs/vcf.md`.
 - **Chromosome naming:** datasets use UCSC-style `chr1` / `chrM`; lookups
   normalize bare `1` / `MT` to the `chr` form. Caveat: a bare-chr value that
   slips past normalization classifies silently as `intergenic` — no error.
@@ -85,8 +93,10 @@ read `region_utils.x` / `io_utils.x` even though the modules now live under
 - `annotation/` — `annotate.py` (`AnnotatedVariant` + the annotation chain),
   `regions.py` (NCLS region classifier + nearest-gene/cCRE), `maf.py`,
   `conservation.py`.
-- `preprocessing/` — `validate.py`, `region_filter.py` (routes variants into
-  overlapping per-region category TSVs), `pipeline.py` (validate → region-filter).
+- `preprocessing/` — `vcf.py` (`read_variants`/`load_variants_vcf` — VCF/gVCF →
+  canonical table; pure-Python, no new dep), `validate.py`, `region_filter.py`
+  (routes variants into overlapping per-region category TSVs), `pipeline.py`
+  (validate → region-filter).
 - `scoring/<x>/` — one subpackage per scorer (see the scorer-module pattern):
   `alphamissense/` (`lookup.py`, `score.py`); `chrombpnet/` (`model.py`,
   `score.py`, `predictions.py`, `ingest.py`, `interpret/`) — the TF/`[model]` path.
