@@ -19,9 +19,9 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-import varscore.utils.io_utils as io_utils
-import varscore.utils.region_utils as region_utils
-from varscore.utils.logging_config import (
+import varscore.core.io as io_utils
+import varscore.annotation.regions as region_utils
+from varscore.core.logging import (
     get_logger,
     log_progress,
     log_timing,

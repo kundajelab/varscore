@@ -1,4 +1,4 @@
-from varscore.utils.region_utils import DNATree
+from varscore.annotation.regions import DNATree
 import pandas as pd
 
 def construct_ccre_dnatree(ccre_bed: str, out_path: str) -> None:

@@ -6,10 +6,10 @@ files (coding, splice, promoter, intronic, ...) for downstream scoring.
 """
 
 import argparse
-from varscore.variant_region_filter import filter_variants_by_region
-from varscore.validate_variants import validate_variants
+from varscore.preprocessing.region_filter import filter_variants_by_region
+from varscore.preprocessing.validate import validate_variants
 
-from varscore.utils.logging_config import get_logger
+from varscore.core.logging import get_logger
 
 logger = get_logger(__name__)
 

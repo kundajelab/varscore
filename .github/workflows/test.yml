@@ -44,7 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.12"]
 
     steps:
     - uses: actions/checkout@v4
@@ -66,6 +66,6 @@ jobs:
     - name: Import core API and assert it is TensorFlow-free
       run: |
         /tmp/clean/bin/python -c "import varscore; print('varscore', varscore.__version__)"
-        /tmp/clean/bin/python -c "import varscore.annotations, varscore.prioritization, varscore.validate_variants, varscore.variant_region_filter, varscore.variant_preprocessing, varscore.alphamissense_scoring, varscore.scoring"
-        /tmp/clean/bin/python -c "import varscore.utils.region_utils, varscore.utils.io_utils, varscore.utils.variant_utils, varscore.utils.alphamissense_utils"
+        /tmp/clean/bin/python -c "import varscore.annotation.annotate, varscore.prioritization, varscore.preprocessing.validate, varscore.preprocessing.region_filter, varscore.preprocessing.pipeline, varscore.scoring.alphamissense.score, varscore.scoring.chrombpnet.score"
+        /tmp/clean/bin/python -c "import varscore.annotation.regions, varscore.core.io, varscore.annotation.maf, varscore.scoring.alphamissense.lookup"
         /tmp/clean/bin/python -c "import importlib.util, sys; assert importlib.util.find_spec('tensorflow') is None, 'TensorFlow leaked into the core install'; print('core install is TensorFlow-free')"

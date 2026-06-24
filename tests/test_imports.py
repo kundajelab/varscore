@@ -17,17 +17,17 @@ import pytest
 
 CORE_MODULES = [
     "varscore",
-    "varscore.annotations",
+    "varscore.annotation.annotate",
     "varscore.prioritization",
-    "varscore.validate_variants",
-    "varscore.variant_preprocessing",
-    "varscore.variant_region_filter",
-    "varscore.alphamissense_scoring",
-    "varscore.scoring",
-    "varscore.utils.region_utils",
-    "varscore.utils.io_utils",
-    "varscore.utils.variant_utils",
-    "varscore.utils.alphamissense_utils",
+    "varscore.preprocessing.validate",
+    "varscore.preprocessing.pipeline",
+    "varscore.preprocessing.region_filter",
+    "varscore.scoring.alphamissense.score",
+    "varscore.scoring.chrombpnet.score",
+    "varscore.annotation.regions",
+    "varscore.core.io",
+    "varscore.annotation.maf",
+    "varscore.scoring.alphamissense.lookup",
 ]
 
 PUBLIC_API = [

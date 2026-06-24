@@ -1,6 +1,6 @@
 # USAGE:
 # docker build -t kundajelab/varscore:dev -f Dockerfile .
-# docker run --rm kundajelab/varscore:dev varscore.ingest_model ...
+# docker run --rm kundajelab/varscore:dev varscore.scoring.chrombpnet.ingest ...
 #
 # Model-scoring image. The TensorFlow/ChromBPNet stack comes from the
 # kundajelab/chrombpnet base image; we install the `[model]` extra so varscore's
@@ -36,8 +36,8 @@ RUN pip install ".[model]"
 COPY . .
 
 # Bake the region-annotation interval table into the image so region
-# classification / filtering (varscore.variant_region_filter,
-# varscore.variant_preprocessing) works out of the box with no host data.
+# classification / filtering (varscore.preprocessing.region_filter,
+# varscore.preprocessing.pipeline) works out of the box with no host data.
 # Pin the gene model via ENSEMBL_RELEASE for reproducible builds. The other
 # datasets (AlphaMissense, conservation, MAF, model weights, genome) are
 # mounted at runtime — see docs/docker.md.

@@ -5,8 +5,8 @@ from datetime import datetime
 
 import pandas as pd
 
-import varscore.utils.alphamissense_utils as alphamissense_utils
-from varscore.utils.logging_config import get_logger, log_timing, setup_logging
+import varscore.scoring.alphamissense.lookup as alphamissense_utils
+from varscore.core.logging import get_logger, log_timing, setup_logging
 
 # Initialize logging if not already configured
 if not logging.getLogger().hasHandlers():
@@ -115,5 +115,5 @@ if __name__ == "__main__":
 
 
 """
-python -m varscore.alphamissense_scoring -v variants.tsv -o alphamissense_scores.tsv
+python -m varscore.scoring.alphamissense.score -v variants.tsv -o alphamissense_scores.tsv
 """

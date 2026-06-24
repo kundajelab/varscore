@@ -79,6 +79,6 @@ install the pinned TF versions (k8s, macOS arm64, modern Python). See
 
 ```bash
 docker build -t kundajelab/varscore:dev -f Dockerfile .
-docker run --rm kundajelab/varscore:dev varscore.variant_region_filter --help  # sanity check before pushing
+docker run --rm kundajelab/varscore:dev varscore.preprocessing.region_filter --help  # sanity check before pushing
 docker push kundajelab/varscore:dev
 ```

@@ -2,7 +2,7 @@ import duckdb
 import pandas as pd
 import pytest
 
-from varscore.utils.alphamissense_utils import AM_COLUMNS, lookup_alphamissense
+from varscore.scoring.alphamissense.lookup import AM_COLUMNS, lookup_alphamissense
 
 
 def _build_dataset(tmp_path):

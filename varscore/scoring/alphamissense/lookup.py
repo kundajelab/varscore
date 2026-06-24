@@ -10,7 +10,7 @@ import os
 import duckdb
 import pandas as pd
 
-from varscore.utils.logging_config import get_logger
+from varscore.core.logging import get_logger
 
 logger = get_logger(__name__)
 

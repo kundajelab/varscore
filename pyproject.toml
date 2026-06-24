@@ -6,7 +6,7 @@ authors = [
 	{ name = "Salil Deshpande" },
 	{ name = "Riya Sinha" },
 ]
-version = "0.0.1a1"
+version = "0.0.2a0"
 requires-python = ">= 3.9, < 3.13"
 
 # Core dependencies: the lightweight annotation / region / lookup / prioritization

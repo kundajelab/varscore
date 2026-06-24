@@ -4,10 +4,10 @@ import argparse
 import tensorflow as tf
 import os
 
-import varscore.utils.chrombpnet_utils as chrombpnet_utils
-import varscore.utils.io_utils as io_utils
-import varscore.utils.region_utils as region_utils
-from varscore.utils.logging_config import get_logger
+import varscore.scoring.chrombpnet.model as chrombpnet_utils
+import varscore.core.io as io_utils
+import varscore.annotation.regions as region_utils
+from varscore.core.logging import get_logger
 
 # Set up logger for this module
 logger = get_logger(__name__)
@@ -167,5 +167,5 @@ if __name__ == "__main__":
 
 
 """
-CUDA_VISIBLE_DEVICES=2 && uv run python -m varscore.ingest_model --peaks_loc /users/riyasinh/data/test.2k.bed --genome_loc /oak/stanford/groups/akundaje/soumyak/refs/hg38/GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta --fold_0_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15/chrombpnet_wo_bias.h5 --fold_1_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_1/chrombpnet_wo_bias.h5 --fold_2_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_2/chrombpnet_wo_bias.h5 --fold_3_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_3/chrombpnet_wo_bias.h5 --fold_4_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_4/chrombpnet_wo_bias.h5 --output_dir ~/varscore_test/
+CUDA_VISIBLE_DEVICES=2 && uv run python -m varscore.scoring.chrombpnet.ingest --peaks_loc /users/riyasinh/data/test.2k.bed --genome_loc /oak/stanford/groups/akundaje/soumyak/refs/hg38/GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta --fold_0_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15/chrombpnet_wo_bias.h5 --fold_1_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_1/chrombpnet_wo_bias.h5 --fold_2_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_2/chrombpnet_wo_bias.h5 --fold_3_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_3/chrombpnet_wo_bias.h5 --fold_4_loc /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15_fold_4/chrombpnet_wo_bias.h5 --output_dir ~/varscore_test/
 """

@@ -10,12 +10,12 @@ import pyfaidx
 import logging
 from datetime import datetime
 
-# NOTE: varscore.utils.chrombpnet_utils pulls in the TensorFlow/SHAP stack
+# NOTE: varscore.scoring.chrombpnet.model pulls in the TensorFlow/SHAP stack
 # (the `[model]` extra). It is imported lazily inside score_variants() so that
 # importing this module — and the pure-numpy scoring math below — stays
 # TensorFlow-free.
-import varscore.utils.io_utils as io_utils
-from varscore.utils.logging_config import get_logger, log_timing, log_progress, setup_logging
+import varscore.core.io as io_utils
+from varscore.core.logging import get_logger, log_timing, log_progress, setup_logging
 
 # Set up logger for this module
 # Initialize logging if not already configured
@@ -67,7 +67,7 @@ def score_variants(
     logger.info(f"Model batch size: {model_batch_size}")
     logger.info(f"Reuse output: {reuse_output}")
     
-    import varscore.utils.chrombpnet_utils as chrombpnet_utils
+    import varscore.scoring.chrombpnet.model as chrombpnet_utils
 
     # Load model and peak distribution once
     logger.info("Loading model...")
@@ -342,5 +342,5 @@ if __name__ == "__main__":
     main()
 
 """
-uv run python -m varscore.scoring -m /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15/chrombpnet_wo_bias.h5 -p /users/riyasinh/projects/chrombpnet-registry/tmpfiles/models/25ff1db5-77ef-4ee0-9b05-f263870ea558/fold_2_peak_distribution.npy -g /users/riyasinh/projects/chrombpnet-registry/tmpfiles/genomes/hg38/genome.fasta -v /users/riyasinh/projects/chrombpnet-registry/tmpfiles/jobs/5af4e0fc-3643-4589-9030-aac7743f1e10/variants/fb3196d9-ca91-4053-a253-58754be8dd12.tsv -o ./results.tsv
+uv run python -m varscore.scoring.chrombpnet.score -m /oak/stanford/groups/akundaje/projects/chromatin-atlas-2022/ATAC/ENCSR474XFV/chrombpnet_model_feb15/chrombpnet_wo_bias.h5 -p /users/riyasinh/projects/chrombpnet-registry/tmpfiles/models/25ff1db5-77ef-4ee0-9b05-f263870ea558/fold_2_peak_distribution.npy -g /users/riyasinh/projects/chrombpnet-registry/tmpfiles/genomes/hg38/genome.fasta -v /users/riyasinh/projects/chrombpnet-registry/tmpfiles/jobs/5af4e0fc-3643-4589-9030-aac7743f1e10/variants/fb3196d9-ca91-4053-a253-58754be8dd12.tsv -o ./results.tsv
 """

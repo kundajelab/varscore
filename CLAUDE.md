@@ -39,22 +39,27 @@ missing. If you change a `construct_*` script, the corresponding artifact must b
 
 ## The scorer-module pattern (mirror it for new scorers)
 
-External scoring resources all follow the same shape; copy it for the next one:
+Each scorer is a self-contained subpackage under `scoring/<x>/`. External
+scoring resources all follow the same shape; copy it for the next one:
 
 1. `scripts/download_<x>.sh` — fetch the raw file.
 2. `scripts/construct_<x>_parquet.py` — rewrite into a **chr-partitioned,
    position-sorted parquet** via DuckDB (Hive-partitioned on `CHROM`).
-3. `utils/<x>_utils.py` — a `lookup_<x>(df, ...)` that left-joins variants
+3. `scoring/<x>/lookup.py` — a `lookup_<x>(df, ...)` that left-joins variants
    against the parquet with DuckDB, pruning to the needed chromosomes.
-4. `<x>_scoring.py` — a thin TSV-in / TSV-out CLI entrypoint.
+4. `scoring/<x>/score.py` — a thin TSV-in / TSV-out CLI entrypoint.
 5. `docs/<x>.md` — user-facing doc.
 
-AlphaMissense and SpliceAI are the reference implementations.
+`scoring/alphamissense/` is the reference implementation. A scorer with both a
+precomputed-lookup and a model-run implementation keeps both under one subpackage
+(e.g. `scoring/spliceai/{lookup,model}.py`) sharing a `columns.py` output
+contract; a model scorer like `scoring/chrombpnet/` swaps the parquet lookup for
+`model.py` + `score.py` and runs only where the `[model]` extra is installed.
 
 ## Conventions
 
 - **Variant files:** headerless TSV, columns `chr, pos, ref, alt[, variant_id]`
-  (`io_utils.VARIANT_SCHEMA`). Scoring outputs append columns to these.
+  (`core.io.VARIANT_SCHEMA`). Scoring outputs append columns to these.
 - **Chromosome naming:** datasets use UCSC-style `chr1` / `chrM`; lookups
   normalize bare `1` / `MT` to the `chr` form. Caveat: a bare-chr value that
   slips past normalization classifies silently as `intergenic` — no error.
@@ -71,15 +76,21 @@ AlphaMissense and SpliceAI are the reference implementations.
 
 ## Module map
 
-- `annotations.py` — `AnnotatedVariant` model + the full annotation chain (pulls
-  in TF via the model path).
-- `variant_region_filter.py` — routes variants into overlapping per-region
-  category TSVs (coding, splice, promoter, …) for downstream scoring.
-- `variant_preprocessing.py` — validate → region-filter pipeline.
-- `scoring.py` / `model_predictions.py` — model scoring (TF).
+The package is grouped by function. `import` paths use aliases, so call sites
+read `region_utils.x` / `io_utils.x` even though the modules now live under
+`annotation/` / `core/`.
+
+- `core/` — `io.py` (`VARIANT_SCHEMA`, variant TSV + sequence IO), `logging.py`.
+  TF-free, depended on by everything; depends on nothing internal.
+- `annotation/` — `annotate.py` (`AnnotatedVariant` + the annotation chain),
+  `regions.py` (NCLS region classifier + nearest-gene/cCRE), `maf.py`,
+  `conservation.py`.
+- `preprocessing/` — `validate.py`, `region_filter.py` (routes variants into
+  overlapping per-region category TSVs), `pipeline.py` (validate → region-filter).
+- `scoring/<x>/` — one subpackage per scorer (see the scorer-module pattern):
+  `alphamissense/` (`lookup.py`, `score.py`); `chrombpnet/` (`model.py`,
+  `score.py`, `predictions.py`, `ingest.py`, `interpret/`) — the TF/`[model]` path.
 - `prioritization.py` — turns a variant×model score DB into prioritized calls.
-- `alphamissense_scoring.py`, `spliceai_scoring.py` — per-scorer lookup entrypoints.
-- `utils/region_utils.py` — NCLS-backed region classifier + nearest-gene/cCRE.
 - `scripts/` — download + construct scripts for the gitignored data artifacts.
 - `tests/` — pytest; region/filter tests monkeypatch the annotator so they don't
   need the built parquet.

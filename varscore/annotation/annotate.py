@@ -8,8 +8,8 @@ from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
-import varscore.utils.region_utils as region_utils
-import varscore.utils.variant_utils as variant_utils
+import varscore.annotation.regions as region_utils
+import varscore.annotation.maf as variant_utils
 
 
 class VariantAnnotationInput(BaseModel):
@@ -231,5 +231,5 @@ if __name__ == "__main__":
 
 
 """
-python -m varscore.annotations -v variants.tsv -o annotated.jsonl
+python -m varscore.annotation.annotate -v variants.tsv -o annotated.jsonl
 """

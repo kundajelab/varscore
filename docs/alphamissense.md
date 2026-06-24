@@ -34,7 +34,7 @@ Annotate a TSV of variants (no header; columns `chr, pos, ref, alt[, variant_id]
 with AlphaMissense scores:
 
 ```bash
-uv run python -m varscore.alphamissense_scoring -v variants.tsv -o alphamissense_scores.tsv
+uv run python -m varscore.scoring.alphamissense.score -v variants.tsv -o alphamissense_scores.tsv
 ```
 
 The output TSV has the original variant columns plus the AlphaMissense columns
@@ -54,7 +54,7 @@ The lookup is also available as a function for use on an in-memory DataFrame:
 
 ```python
 import pandas as pd
-from varscore.utils.alphamissense_utils import lookup_alphamissense
+from varscore.scoring.alphamissense.lookup import lookup_alphamissense
 
 variants = pd.DataFrame({"chr": ["chr1"], "pos": [69094], "ref": ["G"], "alt": ["T"]})
 scored = lookup_alphamissense(variants)

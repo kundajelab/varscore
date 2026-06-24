@@ -1,4 +1,4 @@
-"""Unit tests for region classification (varscore.utils.region_utils).
+"""Unit tests for region classification (varscore.annotation.regions).
 
 These build a tiny in-memory interval index so they don't depend on the full
 region_annotations.parquet build.
@@ -6,7 +6,7 @@ region_annotations.parquet build.
 import pandas as pd
 import pytest
 
-import varscore.utils.region_utils as ru
+import varscore.annotation.regions as ru
 
 
 def _index(rows):

@@ -76,7 +76,7 @@ exonic, noncoding_gene, intronic, promoter, intergenic
 ## Python API
 
 ```python
-from varscore.utils.region_utils import (
+from varscore.annotation.regions import (
     region_annotations,        # single interval -> RegionAnnotation
     region_annotations_batch,  # vectorized over many intervals (preferred at scale)
     region_type,               # back-compat shim -> single most-severe label (str)
@@ -103,7 +103,7 @@ labels to split a variant file into per-category TSVs, one per region kind, so
 each can feed the right scorer:
 
 ```bash
-uv run python -m varscore.variant_region_filter -v variants.tsv -o regions/
+uv run python -m varscore.preprocessing.region_filter -v variants.tsv -o regions/
 ```
 
 Routing is **membership-based and overlapping** — a variant is written to every
