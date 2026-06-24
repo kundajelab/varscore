@@ -30,6 +30,7 @@ def validate_variants(
     invalid_out_path: Optional[str] = None,
     width: int = 2114,
     batch_size: int = 250000,
+    fmt: str = "auto",
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Validate variants and return valid and invalid variant dataframes.
 
@@ -40,6 +41,8 @@ def validate_variants(
         invalid_out_path: Optional path to save invalid variants. If None, only returns dataframes.
         width: Sequence width for validation (default: 2114).
         batch_size: Number of variants to process at once to manage memory.
+        fmt: Input format, one of "auto", "tsv", "vcf" (default: auto-detect by
+            extension). VCF/gVCF is converted to the canonical table on load.
 
     Returns:
         Tuple of (valid_variants_df, invalid_variants_df)
@@ -51,9 +54,9 @@ def validate_variants(
     logger.info(f"Sequence width: {width}")
     logger.info(f"Batch size: {batch_size}")
     
-    # Load full variant dataframe
+    # Load full variant dataframe (TSV or VCF/gVCF, dispatched by `fmt`)
     logger.info("Loading variants...")
-    variant_df = io_utils.load_variants(variants_loc)
+    variant_df = io_utils.read_variants(variants_loc, fmt)
     total_variants = len(variant_df)
     logger.info(f"Loaded {total_variants} variants")
     
@@ -107,7 +110,10 @@ def validate_variants(
         valid_variants.append(batch_valid)
         invalid_variants.append(batch_invalid)
         
-        # Write valid variants incrementally (append mode, no headers)
+        # Write valid variants incrementally (append mode, no headers).
+        # NOTE: variant_id is intentionally dropped here for now. Preserving it
+        # end-to-end is a future goal; this projection is the single blocker to
+        # threading custom IDs through to the scorers (see docs/vcf.md).
         if valid_out_path and not batch_valid.empty:
             batch_valid[["chr", "pos", "ref", "alt"]].to_csv(
                 valid_out_path, sep="\t", index=False, header=False, mode="a"
@@ -159,6 +165,7 @@ def main():
         args.invalid_out_path,
         args.width,
         args.batch_size,
+        args.format,
     )
     
     # Print summary
@@ -200,6 +207,10 @@ def _parse_args():
     parser.add_argument(
         "-b", "--batch_size", type=int, default=250000,
         help="Number of variants to process at once (default: 250000)."
+    )
+    parser.add_argument(
+        "-f", "--format", default="auto", choices=["auto", "tsv", "vcf"],
+        help="Input format (default: auto, detected by extension)."
     )
     return parser.parse_args()
 

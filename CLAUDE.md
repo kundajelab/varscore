@@ -60,6 +60,15 @@ contract; a model scorer like `scoring/chrombpnet/` swaps the parquet lookup for
 
 - **Variant files:** headerless TSV, columns `chr, pos, ref, alt[, variant_id]`
   (`core.io.VARIANT_SCHEMA`). Scoring outputs append columns to these.
+- **VCF/gVCF input** is accepted at the entry point via
+  `core.io.read_variants(path, fmt="auto")` — the format-neutral loader that
+  dispatches to `load_variants` (TSV) / `load_variants_vcf` (VCF). It's wired into
+  the `-f/--format` flag on `validate`/`pipeline`, converting to the canonical
+  table above so everything downstream is unchanged. Pure-Python (stdlib `gzip`,
+  **no new dep**, reads `.vcf`/`.vcf.gz`); splits multi-allelic sites and drops
+  symbolic alleles (`<NON_REF>`, `<*>`, `*`, breakends). No `.bcf`. The VCF `ID` is
+  captured into `variant_id`, but full end-to-end ID preservation is still gated on
+  the `variant_id` drop in `validate.py` — see `docs/vcf.md`.
 - **Chromosome naming:** datasets use UCSC-style `chr1` / `chrM`; lookups
   normalize bare `1` / `MT` to the `chr` form. Caveat: a bare-chr value that
   slips past normalization classifies silently as `intergenic` — no error.
@@ -80,13 +89,17 @@ The package is grouped by function. `import` paths use aliases, so call sites
 read `region_utils.x` / `io_utils.x` even though the modules now live under
 `annotation/` / `core/`.
 
-- `core/` — `io.py` (`VARIANT_SCHEMA`, variant TSV + sequence IO), `logging.py`.
-  TF-free, depended on by everything; depends on nothing internal.
+- `core/` — `io.py` (`VARIANT_SCHEMA`; variant + sequence IO: `load_variants`
+  (TSV), `load_variants_vcf` (VCF/gVCF), the `read_variants` format dispatcher,
+  and `validate_variant`), `logging.py`. TF-free, depended on by everything;
+  depends on nothing internal.
 - `annotation/` — `annotate.py` (`AnnotatedVariant` + the annotation chain),
   `regions.py` (NCLS region classifier + nearest-gene/cCRE), `maf.py`,
   `conservation.py`.
 - `preprocessing/` — `validate.py`, `region_filter.py` (routes variants into
-  overlapping per-region category TSVs), `pipeline.py` (validate → region-filter).
+  overlapping per-region category TSVs), `pipeline.py` (validate → region-filter),
+  `vcf.py` (thin CLI: convert any input format → canonical TSV; loading itself
+  lives in `core.io`).
 - `scoring/<x>/` — one subpackage per scorer (see the scorer-module pattern):
   `alphamissense/` (`lookup.py`, `score.py`); `chrombpnet/` (`model.py`,
   `score.py`, `predictions.py`, `ingest.py`, `interpret/`) — the TF/`[model]` path.

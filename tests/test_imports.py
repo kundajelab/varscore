@@ -22,6 +22,7 @@ CORE_MODULES = [
     "varscore.preprocessing.validate",
     "varscore.preprocessing.pipeline",
     "varscore.preprocessing.region_filter",
+    "varscore.preprocessing.vcf",
     "varscore.scoring.alphamissense.score",
     "varscore.scoring.chrombpnet.score",
     "varscore.annotation.regions",
