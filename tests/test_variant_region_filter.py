@@ -1,4 +1,4 @@
-"""Tests for region-category routing (varscore.variant_region_filter).
+"""Tests for region-category routing (varscore.preprocessing.region_filter).
 
 region_annotations_batch is monkeypatched so these don't depend on the built
 region_annotations.parquet — we feed controlled label sets and assert each
@@ -7,8 +7,8 @@ variant lands in exactly the right (overlapping) set of category files.
 import pandas as pd
 import pytest
 
-import varscore.utils.region_utils as region_utils
-import varscore.variant_region_filter as vrf
+import varscore.annotation.regions as region_utils
+import varscore.preprocessing.region_filter as vrf
 
 # variant_id -> region labels the (mocked) annotator should return for it.
 LABELS_BY_VARIANT = {

@@ -1,4 +1,4 @@
-from varscore.utils.io_utils import load_peaks, NARROWPEAK_SCHEMA
+from varscore.core.io import load_peaks, NARROWPEAK_SCHEMA
 
 SAMPLE_PEAKS_FILE_WITH_SUMMIT = "tests/data/sample_beds/with_summits.narrowPeak"
 SAMPLE_PEAKS_FILE_NO_SUMMIT = "tests/data/sample_beds/without_summits_bed3.bed"

@@ -3,7 +3,7 @@ from numpy.testing import assert_array_equal
 import pandas as pd
 import pytest
 
-from varscore.scoring import _compute_active_allele_quantile, _compute_jsd, _score_variant_df
+from varscore.scoring.chrombpnet.score import _compute_active_allele_quantile, _compute_jsd, _score_variant_df
 
 
 

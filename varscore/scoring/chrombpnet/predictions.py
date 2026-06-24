@@ -6,8 +6,8 @@ import argparse
 
 from typing import List
 
-import varscore.utils.io_utils as io_utils
-import varscore.utils.region_utils as region_utils
+import varscore.core.io as io_utils
+import varscore.annotation.regions as region_utils
 
 
 ##################

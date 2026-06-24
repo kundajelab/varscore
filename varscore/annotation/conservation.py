@@ -4,7 +4,7 @@ from enum import Enum
 import os
 import pyBigWig
 
-from varscore.utils.logging_config import get_logger
+from varscore.core.logging import get_logger
 
 # Set up logger for this module
 logger = get_logger(__name__)

@@ -17,8 +17,8 @@ pure-Python, TensorFlow-free install instead, see the library
   (`varscore/data/region_annotations.parquet`), built at image-build time from
   the Ensembl GFF3, plus the tracked gene table (`gene_df.tsv`). This means
   region classification / filtering works with no host data:
-  - `python -m varscore.variant_region_filter`
-  - `python -m varscore.variant_preprocessing`
+  - `python -m varscore.preprocessing.region_filter`
+  - `python -m varscore.preprocessing.pipeline`
 
 ### Not baked in (mounted at runtime)
 
@@ -55,13 +55,13 @@ The entrypoint is `python -m`, so pass a varscore module plus its arguments:
 ```bash
 # Region-classify / route a variant file (uses the baked region data — no mounts)
 docker run --rm -v "$PWD:/work" kundajelab/varscore:dev \
-    varscore.variant_region_filter -v /work/variants.tsv -o /work/regions/
+    varscore.preprocessing.region_filter -v /work/variants.tsv -o /work/regions/
 
 # Model scoring (mount the model, genome, and peak distribution)
 docker run --rm --gpus all \
     -v /data/models:/models -v /data/genome:/genome -v "$PWD:/work" \
     kundajelab/varscore:dev \
-    varscore.scoring \
+    varscore.scoring.chrombpnet.score \
         -m /models/chrombpnet_nobias.h5 \
         -p /models/fold_0_peak_distribution.npy \
         -g /genome/hg38.fa \
@@ -72,7 +72,7 @@ docker run --rm --gpus all \
 Sanity check after building (do this before pushing):
 
 ```bash
-docker run --rm kundajelab/varscore:dev varscore.variant_region_filter --help
+docker run --rm kundajelab/varscore:dev varscore.preprocessing.region_filter --help
 ```
 
 ## Push

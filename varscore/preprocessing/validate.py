@@ -6,8 +6,8 @@ import os
 from typing import Tuple, List, Optional
 from datetime import datetime
 
-import varscore.utils.io_utils as io_utils
-from varscore.utils.logging_config import get_logger, log_timing, log_progress, setup_logging
+import varscore.core.io as io_utils
+from varscore.core.logging import get_logger, log_timing, log_progress, setup_logging
 import logging
 
 # Set up logger for this module

@@ -7,7 +7,7 @@ from typing import Tuple, Optional
 from dataclasses import dataclass
 from enum import Enum
 
-from varscore.utils.logging_config import get_logger
+from varscore.core.logging import get_logger
 # NOTE: chrombpnet_utils pulls in the TensorFlow stack, so it is imported lazily
 # inside the (few) functions that need one-hot encoding. This keeps lightweight
 # entrypoints like load_variants() usable without TensorFlow installed.
@@ -42,7 +42,7 @@ def get_peak_seqs(
     peaks_df: pd.DataFrame, genome_loc: str, width: int = 2114
 ) -> np.ndarray:
     """Get one-hot encoded peak sequences from peaks."""
-    import varscore.utils.chrombpnet_utils as chrombpnet_utils
+    import varscore.scoring.chrombpnet.model as chrombpnet_utils
     # Load sequences
     sequences = []
     with pyfaidx.Fasta(genome_loc) as genome:
@@ -182,7 +182,7 @@ def get_variant_seqs_with_genome(
     
     This function raises AssertionError for invalid variants (legacy behavior).
     """
-    import varscore.utils.chrombpnet_utils as chrombpnet_utils
+    import varscore.scoring.chrombpnet.model as chrombpnet_utils
     ref_sequences = []
     alt_sequences = []
     

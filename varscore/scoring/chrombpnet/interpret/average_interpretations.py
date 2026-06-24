@@ -166,5 +166,5 @@ if __name__ == "__main__":
     main()
 
 """
-uv run python -m varscore.shap.average_interpretations --fold_0_dir ~/varscore_test/fold_0_interpretations --fold_1_dir ~/varscore_test/fold_1_interpretations --fold_2_dir ~/varscore_test/fold_2_interpretations --fold_3_dir ~/varscore_test/fold_3_interpretations --fold_4_dir ~/varscore_test/fold_4_interpretations --out_dir ~/varscore_test/average_interpretations
+uv run python -m varscore.scoring.chrombpnet.interpret.average_interpretations --fold_0_dir ~/varscore_test/fold_0_interpretations --fold_1_dir ~/varscore_test/fold_1_interpretations --fold_2_dir ~/varscore_test/fold_2_interpretations --fold_3_dir ~/varscore_test/fold_3_interpretations --fold_4_dir ~/varscore_test/fold_4_interpretations --out_dir ~/varscore_test/average_interpretations
 """
