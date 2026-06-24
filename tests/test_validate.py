@@ -43,6 +43,33 @@ def variants_tsv(tmp_path):
     return str(p)
 
 
+@pytest.fixture
+def variants_tsv_4col(tmp_path):
+    # a genuine headerless 4-column file (no variant_id column at all)
+    r30, a30 = _ref_alt(30)
+    r40, a40 = _ref_alt(40)
+    p = tmp_path / "variants4.tsv"
+    p.write_text(f"chr1\t30\t{r30}\t{a30}\nchr1\t40\t{r40}\t{a40}\n")
+    return str(p)
+
+
+def test_validate_accepts_4col_tsv(genome, variants_tsv_4col, tmp_path):
+    """A 4-column TSV (no variant_id) is valid; output is canonical with a blank id."""
+    valid_out = tmp_path / "valid.tsv"
+    invalid_out = tmp_path / "invalid.tsv"
+
+    valid_df, invalid_df = validate_variants(
+        variants_tsv_4col, genome, str(valid_out), str(invalid_out), width=20
+    )
+
+    assert len(valid_df) == 2
+    assert invalid_df.empty
+
+    out = io_utils.load_variants(str(valid_out))
+    assert list(out.columns) == io_utils.VARIANT_SCHEMA
+    assert out["variant_id"].isna().all()  # no ids supplied -> all blank
+
+
 def test_validate_preserves_variant_id(genome, variants_tsv, tmp_path):
     valid_out = tmp_path / "valid.tsv"
     invalid_out = tmp_path / "invalid.tsv"
