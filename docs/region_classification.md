@@ -35,6 +35,9 @@ uv run python -m varscore.scripts.construct_region_annotations \
     -o varscore/data/region_annotations.parquet
 ```
 
+> The published [Docker image](docker.md) builds this parquet at image-build
+> time, so region classification works inside the container with no host data.
+
 The output is a flat interval list — one row per labelled genomic interval
 (`chrom, start, end, strand, feature, gene_id, gene_name, biotype`), 1-based and
 endpoint-inclusive. `exon`, `cds`, `five_prime_utr`, and `three_prime_utr` come

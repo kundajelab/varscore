@@ -1,4 +1,31 @@
-# from src.varscore.annotations import add_n_closest_elements, add_closest_elements_in_window
+"""varscore: common functions for variant effect prediction & prioritization.
 
-# __all__ = ["add_n_closest_elements", "add_closest_elements_in_window"]
-# __version__ = "0.0.1"
+The names re-exported here are the TensorFlow-free core API (annotation,
+region classification, lookups, prioritization). Model scoring / SHAP live in
+``varscore.scoring``, ``varscore.model_predictions`` and ``varscore.shap`` and
+require the ``[model]`` extra; import those modules directly.
+"""
+
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("varscore")
+except PackageNotFoundError:  # running from a source tree without an install
+    __version__ = "0.0.0+dev"
+
+from varscore.annotations import (
+    AnnotatedVariant,
+    VariantAnnotationInput,
+    annotate_variant,
+    annotate_variants,
+)
+from varscore.prioritization import prioritize_variants
+
+__all__ = [
+    "__version__",
+    "AnnotatedVariant",
+    "VariantAnnotationInput",
+    "annotate_variant",
+    "annotate_variants",
+    "prioritize_variants",
+]

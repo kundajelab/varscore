@@ -10,7 +10,10 @@ import pyfaidx
 import logging
 from datetime import datetime
 
-import varscore.utils.chrombpnet_utils as chrombpnet_utils
+# NOTE: varscore.utils.chrombpnet_utils pulls in the TensorFlow/SHAP stack
+# (the `[model]` extra). It is imported lazily inside score_variants() so that
+# importing this module — and the pure-numpy scoring math below — stays
+# TensorFlow-free.
 import varscore.utils.io_utils as io_utils
 from varscore.utils.logging_config import get_logger, log_timing, log_progress, setup_logging
 
@@ -64,6 +67,8 @@ def score_variants(
     logger.info(f"Model batch size: {model_batch_size}")
     logger.info(f"Reuse output: {reuse_output}")
     
+    import varscore.utils.chrombpnet_utils as chrombpnet_utils
+
     # Load model and peak distribution once
     logger.info("Loading model...")
     model = chrombpnet_utils.load_chrombpnet(model_loc)
