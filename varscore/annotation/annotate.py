@@ -17,6 +17,7 @@ class VariantAnnotationInput(BaseModel):
     pos: int
     ref: str
     alt: str
+    variant_id: Optional[str] = None
 
 
 class AnnotatedVariant(BaseModel):
@@ -24,6 +25,7 @@ class AnnotatedVariant(BaseModel):
     pos: int
     ref: str
     alt: str
+    variant_id: Optional[str] = None
     ref_length: int
     alt_length: int
     variant_length: int
@@ -65,7 +67,9 @@ def annotate_variants_file(
     regardless of input size.
 
     Args:
-        variants_loc: Path to input TSV file (no header, columns: chr, pos, ref, alt)
+        variants_loc: Path to input TSV file (no header, columns: chr, pos, ref,
+            alt[, variant_id]). A 5th variant_id column, if present, is preserved
+            on each annotated record.
         out_path: Path to save annotated variants JSONL
         batch_size: Number of variants to process per batch
     """
@@ -81,10 +85,10 @@ def annotate_variants_file(
     total_written = 0
     start_time = time.time()
 
-    # Read input TSV in chunks
+    # Read input TSV in chunks (canonical schema; variant_id is optional)
     chunks = pd.read_csv(
         variants_loc, sep="\t", header=None,
-        names=["chr", "pos", "ref", "alt"],
+        names=["chr", "pos", "ref", "alt", "variant_id"],
         chunksize=batch_size,
     )
 
@@ -98,6 +102,7 @@ def annotate_variants_file(
                 pos=int(row["pos"]),
                 ref=row["ref"],
                 alt=row["alt"],
+                variant_id=None if pd.isna(row["variant_id"]) else str(row["variant_id"]),
             )
             for _, row in chunk_df.iterrows()
         ]
@@ -105,11 +110,17 @@ def annotate_variants_file(
         # Annotate batch
         annotated = annotate_variants(variants)
 
-        # Write batch to JSONL (append mode after the first batch)
+        # Write batch to JSONL (append mode after the first batch). We render to
+        # a string and append manually rather than passing mode= to to_json, which
+        # is only supported on pandas >= 2.0 (the project floor is 1.3.4).
         records = [av.model_dump() for av in annotated]
         batch_df = pd.DataFrame(records)
         write_mode = "w" if batch_num == 1 else "a"
-        batch_df.to_json(out_path, orient="records", lines=True, mode=write_mode)
+        json_lines = batch_df.to_json(orient="records", lines=True)
+        if not json_lines.endswith("\n"):
+            json_lines += "\n"
+        with open(out_path, write_mode) as f:
+            f.write(json_lines)
 
         total_written += len(records)
         batch_elapsed = time.time() - batch_start
@@ -168,6 +179,7 @@ def annotate_variant(variant: VariantAnnotationInput) -> AnnotatedVariant:
         pos=var_pos,
         ref=var_ref,
         alt=var_alt,
+        variant_id=variant.variant_id,
         ref_length=var_ref_length,
         alt_length=var_alt_length,
         variant_length=var_variant_length,
@@ -215,7 +227,7 @@ def _parse_args():
         description="Annotate variants with region type, nearest genes, cCREs, and allele frequencies."
     )
     parser.add_argument(
-        "-v", "--variants_loc", required=True, help="Input TSV file (no header, columns: chr, pos, ref, alt)"
+        "-v", "--variants_loc", required=True, help="Input TSV file (no header, columns: chr, pos, ref, alt[, variant_id])"
     )
     parser.add_argument(
         "-o", "--out_path", required=False, help="Output JSONL file with annotations"

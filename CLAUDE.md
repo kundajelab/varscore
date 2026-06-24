@@ -59,7 +59,12 @@ contract; a model scorer like `scoring/chrombpnet/` swaps the parquet lookup for
 ## Conventions
 
 - **Variant files:** headerless TSV, columns `chr, pos, ref, alt[, variant_id]`
-  (`core.io.VARIANT_SCHEMA`). Scoring outputs append columns to these.
+  (`core.io.VARIANT_SCHEMA`). Scoring outputs append columns to these. The
+  optional `variant_id` (a TSV 5th column or a VCF `ID`) is **preserved
+  end-to-end** — every module reads columns by *name*, never by position, so a
+  custom id rides through validate → region_filter → scorers → prioritization (and
+  `annotate.py`) without stripping/reattaching. Blank when none is supplied; no
+  synthetic id is generated. See `docs/variant_id.md`.
 - **VCF/gVCF input** is accepted at the entry point via
   `core.io.read_variants(path, fmt="auto")` — the format-neutral loader that
   dispatches to `load_variants` (TSV) / `load_variants_vcf` (VCF). It's wired into
@@ -67,8 +72,8 @@ contract; a model scorer like `scoring/chrombpnet/` swaps the parquet lookup for
   table above so everything downstream is unchanged. Pure-Python (stdlib `gzip`,
   **no new dep**, reads `.vcf`/`.vcf.gz`); splits multi-allelic sites and drops
   symbolic alleles (`<NON_REF>`, `<*>`, `*`, breakends). No `.bcf`. The VCF `ID` is
-  captured into `variant_id`, but full end-to-end ID preservation is still gated on
-  the `variant_id` drop in `validate.py` — see `docs/vcf.md`.
+  captured into `variant_id` and preserved end-to-end — see `docs/vcf.md` and
+  `docs/variant_id.md`.
 - **Chromosome naming:** datasets use UCSC-style `chr1` / `chrM`; lookups
   normalize bare `1` / `MT` to the `chr` form. Caveat: a bare-chr value that
   slips past normalization classifies silently as `intergenic` — no error.

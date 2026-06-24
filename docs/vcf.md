@@ -56,11 +56,8 @@ python -m varscore.preprocessing.pipeline -i input.vcf.gz -g genome.fa -f auto \
 - **Whole-file in memory.** Like the TSV loader, the parser returns one DataFrame;
   `validate` then batches at 250k. Fine for typical inputs.
 
-## Custom variant IDs (future work)
+## Custom variant IDs
 
-The VCF parser already captures the `ID` column into `variant_id`, and the
-standalone converter writes the full 5-column canonical TSV, so IDs survive the
-conversion. **End-to-end** ID preservation through the scorers is not yet wired:
-`preprocessing/validate.py` writes only `chr, pos, ref, alt` for valid variants
-(it drops `variant_id`). That single projection is the only blocker — the input
-path here is built to be extensible to it without further redesign.
+The VCF parser captures the `ID` column into `variant_id` (`.` → blank), and that
+id is preserved end-to-end through preprocessing, scoring, prioritization, and
+annotation. See [variant_id.md](variant_id.md).
