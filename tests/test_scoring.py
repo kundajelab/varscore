@@ -31,6 +31,8 @@ def test_score_variant_df():
     assert "ips" in variant_df.columns
     assert len(variant_df.columns) == 9
     assert len(variant_df) == 5
+    # the custom variant_id rides through scoring untouched (name-based access)
+    assert list(variant_df["variant_id"]) == ["v1", "v2", "v3", "v4", "v5"]
 
 
 def test_compute_active_allele_quantile():

@@ -111,11 +111,12 @@ def validate_variants(
         invalid_variants.append(batch_invalid)
         
         # Write valid variants incrementally (append mode, no headers).
-        # NOTE: variant_id is intentionally dropped here for now. Preserving it
-        # end-to-end is a future goal; this projection is the single blocker to
-        # threading custom IDs through to the scorers (see docs/vcf.md).
+        # We write the full canonical schema so a custom variant_id (from a TSV
+        # 5th column or a VCF ID) is preserved end-to-end; downstream modules read
+        # by column name and carry it through. When no id was supplied the 5th
+        # field is simply blank (NaN -> empty). See docs/variant_id.md.
         if valid_out_path and not batch_valid.empty:
-            batch_valid[["chr", "pos", "ref", "alt"]].to_csv(
+            batch_valid[io_utils.VARIANT_SCHEMA].to_csv(
                 valid_out_path, sep="\t", index=False, header=False, mode="a"
             )
         
