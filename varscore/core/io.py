@@ -1,3 +1,4 @@
+import gzip
 import re
 import numpy as np
 import pandas as pd
@@ -257,9 +258,134 @@ VARIANT_SCHEMA = ["chr", "pos", "ref", "alt", "variant_id"]
 
 
 def load_variants(variants_loc: str) -> pd.DataFrame:
-    """Load a variants DataFrame."""
+    """Load a variants DataFrame from a headerless canonical TSV."""
     variants_df = pd.read_csv(variants_loc, sep="\t", names=VARIANT_SCHEMA)
     return variants_df
+
+
+# Extensions that indicate gzip/bgzip compression.
+_GZIP_SUFFIXES = (".gz", ".bgz")
+# Extensions that indicate a VCF (after stripping any gzip suffix).
+_VCF_SUFFIXES = (".vcf", ".gvcf")
+
+
+def _is_symbolic_alt(alt: str, ref: str) -> bool:
+    """Return True if ``alt`` is not a concrete REF->ALT base substitution.
+
+    Drops the alleles that pepper gVCF reference blocks and structural-variant
+    records and that genome-aware validation could not score anyway: the symbolic
+    ``<...>`` forms (``<NON_REF>``, ``<*>``, ``<DEL>``, ...), the spanning-deletion
+    star / missing / empty allele, breakend notation, and the monomorphic
+    ``alt == ref`` no-op some gVCF tools emit. Concrete sequences (including
+    indels, and even malformed ones like lowercase/``N``) are kept and left for
+    ``validate_variant`` to vet, matching the canonical-TSV input path.
+    """
+    if alt in {"*", ".", ""}:
+        return True
+    if alt.startswith("<") and alt.endswith(">"):
+        return True
+    if "[" in alt or "]" in alt:
+        return True
+    if alt == ref:
+        return True
+    return False
+
+
+def load_variants_vcf(path: str) -> pd.DataFrame:
+    """Parse a VCF/gVCF (``.vcf`` or ``.vcf.gz``) into the canonical variant table.
+
+    Pure Python, no extra dependency: stdlib ``gzip`` streams both plain ``.vcf``
+    and bgzipped ``.vcf.gz`` (bgzip is a valid gzip stream). Multi-allelic ``ALT``
+    is split into one row per concrete allele; symbolic / non-variant alleles
+    (see ``_is_symbolic_alt``) are dropped with a logged count so gVCF reference
+    blocks don't explode into millions of non-variant rows. ``POS`` is 1-based
+    (matching ``pos``); ``ID == "."`` becomes a missing ``variant_id``. Chromosome
+    naming and ACGT/genome checks are deferred to ``validate_variant`` downstream.
+
+    Args:
+        path: Path to a plain or bgzipped VCF/gVCF file.
+
+    Returns:
+        DataFrame with columns ``chr, pos, ref, alt, variant_id`` (one row per
+        concrete ALT allele). The columns are always present, even when empty.
+    """
+    opener = gzip.open if path.endswith(_GZIP_SUFFIXES) else open
+
+    rows = []
+    n_sites = 0  # data (non-header) lines seen
+    n_symbolic = 0  # symbolic / non-variant ALT alleles dropped
+
+    with opener(path, "rt") as fh:
+        for lineno, line in enumerate(fh, start=1):
+            if line.startswith("#"):  # ## meta + #CHROM header
+                continue
+            line = line.rstrip("\n")
+            if not line:
+                continue
+
+            fields = line.split("\t")
+            if len(fields) < 5:
+                raise ValueError(
+                    f"{path}:{lineno}: malformed VCF data line, expected at least "
+                    f"5 tab-separated fields (CHROM POS ID REF ALT), got {len(fields)}"
+                )
+            chrom, pos, vid, ref, alt = fields[:5]
+            n_sites += 1
+
+            variant_id = None if vid == "." else vid
+            pos = int(pos)  # VCF POS is 1-based, matching our schema
+
+            for allele in alt.split(","):  # split multi-allelic sites
+                if _is_symbolic_alt(allele, ref):
+                    n_symbolic += 1
+                    continue
+                rows.append((chrom, pos, ref, allele, variant_id))
+
+    logger.info(
+        "Parsed %d VCF sites -> %d concrete variant rows; "
+        "dropped %d symbolic/non-variant ALT alleles",
+        n_sites,
+        len(rows),
+        n_symbolic,
+    )
+
+    return pd.DataFrame(rows, columns=VARIANT_SCHEMA)
+
+
+def read_variants(path: str, fmt: str = "auto") -> pd.DataFrame:
+    """Load variants into the canonical table, dispatching on file format.
+
+    This is the format-neutral entry point; ``load_variants`` (TSV) and
+    ``load_variants_vcf`` (VCF/gVCF) are the per-format adapters it composes.
+
+    Args:
+        path: Input variants file.
+        fmt: One of ``"auto"``, ``"tsv"``, ``"vcf"``. ``"auto"`` routes
+            ``.vcf``/``.vcf.gz`` (and ``.gvcf``) to the VCF parser and everything
+            else to ``load_variants``; ``.bcf`` raises a clear error.
+
+    Returns:
+        DataFrame with columns ``chr, pos, ref, alt, variant_id``.
+    """
+    if fmt == "vcf":
+        return load_variants_vcf(path)
+    if fmt == "tsv":
+        return load_variants(path)
+    if fmt != "auto":
+        raise ValueError(f"Unknown format {fmt!r}; expected one of auto, tsv, vcf.")
+
+    # auto-detect by extension (strip any gzip suffix first)
+    base = path
+    if base.endswith(_GZIP_SUFFIXES):
+        base = base.rsplit(".", 1)[0]
+    if base.endswith(".bcf") or path.endswith(".bcf"):
+        raise ValueError(
+            f"Binary BCF is not supported ({path}); convert to VCF first, e.g. "
+            "`bcftools view in.bcf -Oz -o out.vcf.gz`."
+        )
+    if base.endswith(_VCF_SUFFIXES):
+        return load_variants_vcf(path)
+    return load_variants(path)
 
 
 if __name__ == "__main__":

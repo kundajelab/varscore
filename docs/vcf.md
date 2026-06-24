@@ -6,8 +6,11 @@ support is an **entry-point adapter**: the file is parsed into the canonical
 variant table, and the rest of the pipeline (validate → region filter → scorers →
 prioritization) is unchanged.
 
-The parser is pure Python and adds **no new dependency** — stdlib `gzip` reads
-both plain `.vcf` and bgzipped `.vcf.gz` (bgzip is a valid gzip stream).
+Format loading lives in the IO layer: `core.io.read_variants(path, fmt="auto")`
+is the format-neutral entry point, dispatching to the per-format adapters
+`core.io.load_variants` (TSV) and `core.io.load_variants_vcf` (VCF/gVCF). The
+parser is pure Python and adds **no new dependency** — stdlib `gzip` reads both
+plain `.vcf` and bgzipped `.vcf.gz` (bgzip is a valid gzip stream).
 
 ## Usage
 

@@ -1,4 +1,4 @@
-"""Tests for VCF/gVCF parsing (varscore.preprocessing.vcf).
+"""Tests for VCF/gVCF parsing and format dispatch (varscore.core.io).
 
 Fully self-contained: inline VCF strings written to tmp_path, pure text ->
 DataFrame, so no genome / parquet / monkeypatching is needed.
@@ -8,7 +8,7 @@ import gzip
 import pandas as pd
 import pytest
 
-import varscore.preprocessing.vcf as vcf
+import varscore.core.io as vcf
 
 # A small VCF exercising the cases we care about. Tab-separated per spec.
 _HEADER = "\n".join(

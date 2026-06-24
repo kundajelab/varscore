@@ -7,7 +7,6 @@ from typing import Tuple, List, Optional
 from datetime import datetime
 
 import varscore.core.io as io_utils
-from varscore.preprocessing.vcf import read_variants
 from varscore.core.logging import get_logger, log_timing, log_progress, setup_logging
 import logging
 
@@ -57,7 +56,7 @@ def validate_variants(
     
     # Load full variant dataframe (TSV or VCF/gVCF, dispatched by `fmt`)
     logger.info("Loading variants...")
-    variant_df = read_variants(variants_loc, fmt)
+    variant_df = io_utils.read_variants(variants_loc, fmt)
     total_variants = len(variant_df)
     logger.info(f"Loaded {total_variants} variants")
     
