@@ -1,13 +1,20 @@
-from typing import Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union
 import numpy as np
 import argparse
-import tensorflow as tf
 import os
 
-import varscore.scoring.chrombpnet.model as chrombpnet_utils
 import varscore.core.io as io_utils
 import varscore.annotation.regions as region_utils
 from varscore.core.logging import get_logger
+
+# NOTE: varscore.scoring.chrombpnet.model pulls in the TensorFlow/SHAP stack
+# (the `[model]` extra). It is imported lazily inside the functions that call it
+# so that importing this module -- and therefore `build_parser()` below -- stays
+# TensorFlow-free and works in a base install.
+if TYPE_CHECKING:
+    import tensorflow as tf
 
 # Set up logger for this module
 logger = get_logger(__name__)
@@ -84,6 +91,8 @@ def _ingest_fold(model_loc: str, peak_seqs: np.ndarray) -> Union[np.ndarray, Non
         peaks_loc: The path to the model peaks.
         genome_loc: The path to the genome fasta.
     """
+    import varscore.scoring.chrombpnet.model as chrombpnet_utils
+
     # Load model
     model = chrombpnet_utils.load_chrombpnet(model_loc)
     # Check model validity
@@ -102,6 +111,8 @@ def _get_peaks_distribution(model: tf.keras.Model, peak_seqs: np.ndarray) -> np.
         error_msg = "The number of peaks must be greater than 1000."
         logger.error(error_msg)
         raise ValueError(error_msg)
+    import varscore.scoring.chrombpnet.model as chrombpnet_utils
+
     # Forward pass on sequences
     _, peak_logcts = chrombpnet_utils.predict(model, peak_seqs)
     # Peak distribuion
@@ -113,7 +124,13 @@ def _get_peaks_distribution(model: tf.keras.Model, peak_seqs: np.ndarray) -> np.
 ########
 # MAIN #
 ########
-def _parse_args():
+def build_parser() -> argparse.ArgumentParser:
+    """Return this command's argument parser without consuming ``sys.argv``.
+
+    Split out from ``_parse_args`` so callers that build this command's argv --
+    notably the orchestration plugin in ``varscore.lava`` -- can validate what
+    they emit against the real flag definitions instead of duplicating them.
+    """
     parser = argparse.ArgumentParser(description="Ingest a model and associated data.")
     parser.add_argument(
         "-p", "--peaks_loc", required=True, help="Location of the peaks file."
@@ -142,7 +159,11 @@ def _parse_args():
         required=True,
         help="Directory to save peaks distribution data.",
     )
-    return parser.parse_args()
+    return parser
+
+
+def _parse_args():
+    return build_parser().parse_args()
 
 
 def main():

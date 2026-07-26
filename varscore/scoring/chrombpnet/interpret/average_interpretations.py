@@ -119,7 +119,13 @@ def main():
     )
 
 
-def _parse_args():
+def build_parser() -> argparse.ArgumentParser:
+    """Return this command's argument parser without consuming ``sys.argv``.
+
+    Split out from ``_parse_args`` so callers that build this command's argv --
+    notably the orchestration plugin in ``varscore.lava`` -- can validate what
+    they emit against the real flag definitions instead of duplicating them.
+    """
     parser = argparse.ArgumentParser(
         description="Average interpretations across multiple folds and save the results."
     )
@@ -159,7 +165,11 @@ def _parse_args():
         required=True,
         help=f"The directory to save averaged interpretations to.",
     )
-    return parser.parse_args()
+    return parser
+
+
+def _parse_args():
+    return build_parser().parse_args()
 
 
 if __name__ == "__main__":

@@ -152,7 +152,13 @@ def _compute_in_peaks_batch(
     return in_peak
 
 
-def _parse_args():
+def build_parser() -> argparse.ArgumentParser:
+    """Return this command's argument parser without consuming ``sys.argv``.
+
+    Split out from ``_parse_args`` so callers that build this command's argv --
+    notably the orchestration plugin in ``varscore.lava`` -- can validate what
+    they emit against the real flag definitions instead of duplicating them.
+    """
     parser = argparse.ArgumentParser(
         description="Average fold-level scores to compute model-level variant scores, including whether variants are in model peaks."
     )
@@ -212,7 +218,11 @@ def _parse_args():
         default=250000,
         help="Number of rows to process at once (default: 250000).",
     )
-    return parser.parse_args()
+    return parser
+
+
+def _parse_args():
+    return build_parser().parse_args()
 
 
 if __name__ == "__main__":

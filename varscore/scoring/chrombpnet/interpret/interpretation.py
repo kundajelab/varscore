@@ -5,8 +5,12 @@ from scipy.stats import binom
 import argparse
 import os
 
-import varscore.scoring.chrombpnet.model as chrombpnet_utils
 import varscore.core.io as io_utils
+
+# NOTE: varscore.scoring.chrombpnet.model pulls in the TensorFlow/SHAP stack
+# (the `[model]` extra). It is imported lazily inside interpret() so that
+# importing this module -- and therefore `build_parser()` below -- stays
+# TensorFlow-free and works in a base install.
 
 
 ##################
@@ -27,6 +31,8 @@ def interpret(
         genome_loc: The path to the model's genome fasta.
         save_dir: The directory to save all outputs to.
     """
+    import varscore.scoring.chrombpnet.model as chrombpnet_utils
+
     # Get reference and alternate sequences
     variant_df = io_utils.load_variants(variants_loc)
     ref_seqs, alt_seqs = io_utils.get_variant_seqs(variant_df, genome_loc)
@@ -53,7 +59,13 @@ def interpret(
 ########
 
 
-def _parse_args():
+def build_parser() -> argparse.ArgumentParser:
+    """Return this command's argument parser without consuming ``sys.argv``.
+
+    Split out from ``_parse_args`` so callers that build this command's argv --
+    notably the orchestration plugin in ``varscore.lava`` -- can validate what
+    they emit against the real flag definitions instead of duplicating them.
+    """
     parser = argparse.ArgumentParser(
         description="Interpret variants using a trained model and save the results."
     )
@@ -72,7 +84,11 @@ def _parse_args():
         required=True,
         help="The directory to save all outputs to.",
     )
-    return parser.parse_args()
+    return parser
+
+
+def _parse_args():
+    return build_parser().parse_args()
 
 
 if __name__ == "__main__":

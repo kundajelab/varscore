@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -151,7 +150,14 @@ def prepare_variant_plotting(
     variants_df.to_csv(out_path, sep="\t", index=False)
 
 
-def parser():
+def build_parser() -> argparse.ArgumentParser:
+    """Return this command's argument parser without consuming ``sys.argv``.
+
+    Named to match the other varscore commands so callers that build this
+    command's argv -- notably the orchestration plugin in ``varscore.lava`` --
+    can validate what they emit against the real flag definitions instead of
+    duplicating them.
+    """
     parser = argparse.ArgumentParser(description="Prepare variant plotting.")
     parser.add_argument(
         "-v",
@@ -175,7 +181,7 @@ def parser():
 
 
 if __name__ == "__main__":
-    args = parser().parse_args()
+    args = build_parser().parse_args()
     prepare_variant_plotting(args.variants_loc, args.plotting_data_dir, args.out_path)
     # print("hi")
     # prepare_variant_plotting(

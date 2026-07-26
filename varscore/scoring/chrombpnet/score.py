@@ -300,7 +300,13 @@ def main():
     )
 
 
-def _parse_args():
+def build_parser() -> argparse.ArgumentParser:
+    """Return this command's argument parser without consuming ``sys.argv``.
+
+    Split out from ``_parse_args`` so callers that build this command's argv --
+    notably the orchestration plugin in ``varscore.lava`` -- can validate what
+    they emit against the real flag definitions instead of duplicating them.
+    """
     parser = argparse.ArgumentParser(
         description="Score variants using a trained model and associated data."
     )
@@ -335,7 +341,11 @@ def _parse_args():
         help="Disable reusing existing output (default: reuse is enabled)."
     )
     parser.set_defaults(reuse_output=True)
-    return parser.parse_args()
+    return parser
+
+
+def _parse_args():
+    return build_parser().parse_args()
 
 
 if __name__ == "__main__":
