@@ -69,3 +69,73 @@ jobs:
         /tmp/clean/bin/python -c "import varscore.annotation.annotate, varscore.prioritization, varscore.preprocessing.validate, varscore.preprocessing.region_filter, varscore.preprocessing.pipeline, varscore.preprocessing.vcf, varscore.scoring.alphamissense.score, varscore.scoring.chrombpnet.score"
         /tmp/clean/bin/python -c "import varscore.annotation.regions, varscore.core.io, varscore.annotation.maf, varscore.scoring.alphamissense.lookup"
         /tmp/clean/bin/python -c "import importlib.util, sys; assert importlib.util.find_spec('tensorflow') is None, 'TensorFlow leaked into the core install'; print('core install is TensorFlow-free')"
+
+    - name: Assert the lava subpackage imports without lava-core
+      # `varscore.lava.commands` is the argv contract and must stay usable in a
+      # base install -- that is what keeps its tests (the always-on gate against
+      # a renamed flag) running in the `test` job above. `ChromBPNetPlugin` is
+      # resolved through a module `__getattr__` for this reason; an eager import
+      # would break this step.
+      run: |
+        /tmp/clean/bin/python -c "from varscore.lava import commands; print(len(commands.COMMANDS), 'commands')"
+        /tmp/clean/bin/python -c "import importlib.util; assert importlib.util.find_spec('lava_core') is None, 'lava-core leaked into the core install'; print('core install has no lava-core')"
+
+  plugin:
+    # Runs the plugin's parity tests against a real `lava-core` (Python 3.12 --
+    # lava-core needs >=3.12 and varscore supports <3.13, so that is the whole
+    # overlap).
+    #
+    # `lava-core` is in a private repository, so this job needs a deploy key and
+    # cannot run for pull requests from forks, where secrets are unavailable. It
+    # no-ops instead of failing when the key is absent. That makes it a
+    # best-effort gate, which is why the argv contract deliberately imports no
+    # orchestration framework: `tests/test_lava_commands.py` runs unconditionally
+    # in the `test` job and is the real always-on protection. This job adds what
+    # only a real lava-core can check -- drop-in parity with the plugin copy that
+    # still ships there.
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check for private-repo access
+      id: gate
+      env:
+        DEPLOY_KEY: ${{ secrets.LAVA_CORE_DEPLOY_KEY }}
+      run: |
+        if [ -n "$DEPLOY_KEY" ]; then
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::LAVA_CORE_DEPLOY_KEY not available (fork PR, or secret unset) - skipping plugin parity tests."
+        fi
+
+    - name: Install uv
+      if: steps.gate.outputs.ok == 'true'
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    - if: steps.gate.outputs.ok == 'true'
+      run: uv python install 3.12
+
+    - name: Authorize the private repository
+      if: steps.gate.outputs.ok == 'true'
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.LAVA_CORE_DEPLOY_KEY }}
+
+    - name: Install varscore + lava-core
+      if: steps.gate.outputs.ok == 'true'
+      run: |
+        uv venv --python 3.12 /tmp/plugin
+        uv pip install --python /tmp/plugin -e . -r requirements-lava.txt pytest
+
+    - name: Assert lava-core is actually importable
+      if: steps.gate.outputs.ok == 'true'
+      # The test module skips without lava-core, so a broken install here would
+      # otherwise report a pass having run nothing. Fail on the install instead.
+      run: /tmp/plugin/bin/python -c "import lava_core; print('lava-core at', lava_core.__file__)"
+
+    - name: Run the plugin tests
+      if: steps.gate.outputs.ok == 'true'
+      run: /tmp/plugin/bin/python -m pytest tests/test_lava_plugin.py -q -p no:cacheprovider --no-header

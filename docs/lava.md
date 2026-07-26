@@ -21,14 +21,27 @@ two agreed. Renaming a flag in `score.py` broke the caller silently, and the
 failure surfaced as an argparse usage error inside a GPU container, minutes into
 a job.
 
-Stated here, they can be tested against the code they describe — which is what
-`tests/test_lava_plugin.py` does.
+Stated here, they can be tested against the code they describe.
+
+## The two halves
+
+The subpackage is split by what it depends on, and the split is load-bearing:
+
+| Module | Imports `lava-core`? | Tested by |
+| --- | --- | --- |
+| `varscore.lava.commands` — the argv contract | **No** | `tests/test_lava_commands.py`, in every install |
+| `varscore.lava.chrombpnet` — the plugin | Yes | `tests/test_lava_plugin.py`, needs `lava-core` |
+
+`lava-core` is private, so tests that need it cannot run for fork PRs and are a
+best-effort gate. Keeping the argv contract framework-free means the check that
+actually catches day-to-day drift — a renamed flag — runs unconditionally in
+ordinary CI, on every supported Python version, with no credentials.
+
+Importing `varscore.lava` does not pull in `lava-core`: `ChromBPNetPlugin` is
+resolved lazily through a module `__getattr__`, so `from varscore.lava import
+commands` works in a base install. Don't make that import eager.
 
 ## Installing
-
-The integration is optional and isolated. It is the only part of varscore that
-imports `lava-core`, nothing in the scoring path imports it, and the scoring
-container does not install it.
 
 ```bash
 # Python 3.12 only -- see below.
@@ -88,30 +101,41 @@ both installed **`lava-core`'s wins**. See "Migration status" below.
 runs it in a container. The scoring image's entrypoint is `python -m`, so a task
 is `python -m varscore.scoring.chrombpnet.score -m ... -p ... -g ...`.
 
-| Name | Command module | Role |
+| Builder | Command module | Role |
 | --- | --- | --- |
-| `SCORE` | `varscore.scoring.chrombpnet.score` | Score variants through one fold |
-| `PREDICTIONS` | `varscore.scoring.chrombpnet.predictions` | Average folds into model-level scores |
-| `INGEST` | `varscore.scoring.chrombpnet.ingest` | Derive peak distributions + interval tree |
-| `INTERPRETATION` | `...interpret.interpretation` | Contribution scores for one fold |
-| `AVERAGE_INTERPRETATIONS` | `...interpret.average_interpretations` | Average fold contributions |
-| `PREPARE_VARIANT_PLOTTING` | `...interpret.prepare_variant_plotting` | Render per-variant plots |
+| `score_argv` | `varscore.scoring.chrombpnet.score` | Score variants through one fold |
+| `predictions_argv` | `varscore.scoring.chrombpnet.predictions` | Average folds into model-level scores |
+| `ingest_argv` | `varscore.scoring.chrombpnet.ingest` | Derive peak distributions + interval tree |
+| `interpretation_argv` | `...interpret.interpretation` | Contribution scores for one fold |
+| `average_interpretations_argv` | `...interpret.average_interpretations` | Average fold contributions |
+| `prepare_variant_plotting_argv` | `...interpret.prepare_variant_plotting` | Render per-variant plots |
+
+**Build argv with the builders, never by hand.** They are the only place flag
+names are written down, so the plugin cannot drift from the parser
+independently — and the round-trip test (build with the builder, parse with the
+real parser) catches a rename with nothing extra installed.
 
 Motif hit-calling is *not* in this table: it runs finemo, a separate tool in its
-own image. Use `is_varscore_command` to filter a mixed plan.
-
-Validate argv against the real parsers:
+own image.
 
 ```python
 from varscore.lava import commands
 
-commands.validate_argv([commands.SCORE, "-m", "model.h5", ...])   # one command
-commands.validate_all(task.command for task in plan.shards)       # a whole plan
+argv = commands.score_argv(model="/m.h5", peak_distribution="/pd.npy",
+                           genome="/g.fa", variants="/v.tsv", out="/o.tsv")
+commands.validate_argv(argv)                                  # one command
+commands.validate_all(task.command for task in plan.shards)   # a whole plan
 ```
 
 Both raise `ArgvContractError` on a mismatch, carrying argparse's own diagnostic.
-Every command module exposes `build_parser()` and imports without the `[model]`
-extra, so this works in a base install with no GPU and no TensorFlow.
+
+### Command ownership is by prefix
+
+`validate_all` skips commands belonging to other tools, and decides by the
+`varscore.` module prefix — *not* by membership of `COMMANDS`. A membership test
+would answer "not ours" for a **misspelled** varscore module and skip right over
+it, passing on exactly the mistake this contract exists to catch. Anything under
+`varscore.` is claimed and must validate.
 
 ### The fold count is structural
 
@@ -119,33 +143,34 @@ extra, so this works in a base install with no GPU and no TensorFlow.
 `ingest`, `predictions`, and `average_interpretations` each declare exactly five
 `required=True` fold flags (`-f0`…`-f4`). A model scored with any other fold
 count cannot be passed to them — there is no flag to put a sixth fold on, and
-omitting one of the five fails as a missing required argument. A caller that
-varies its fold count independently emits argv these commands reject.
+omitting one of the five fails as a missing required argument. The builders
+reject a wrong-sized fold list rather than emitting argv the command would
+refuse.
 
-## Known divergence: `region_type` vs `in_promoter`
+## The promoter rule
 
-varscore states the ChromBPNet prioritization rule **twice**:
+varscore states the ChromBPNet prioritization rule twice: as a pandas expression
+in `varscore/prioritization.py`, for scoring in-process, and as a predicate in
+`varscore/lava/chrombpnet.py`, for a platform to push into SQL.
 
-- `varscore/prioritization.py` — a pandas expression, for scoring in-process.
-- `varscore/lava/chrombpnet.py` — a predicate, for a platform to push into SQL.
+Both test the **`in_promoter` membership flag**. Neither may test
+`region_type == 'promoter'`.
 
-They should agree. They do not. The pandas version tests the `in_promoter`
-membership flag; the predicate tests `region_type == 'promoter'`.
+A variant overlaps a *set* of regions; `region_type` is only the
+severity-collapsed headline. A variant that is both exonic and in a promoter
+reports `region_type = 'exonic'`, so testing the collapsed label drops its
+promoter membership and fails to prioritize it. This is the general rule in
+[region classification](region_classification.md) — test membership, never
+`region_type == "x"` — and it has caused a real prioritization bug.
 
-`region_type` is a severity-collapsed *single* label, so a variant that is both
-exonic and in a promoter reports `region_type == 'exonic'`. It fails the
-predicate's promoter test while passing the pandas one. This is precisely the
-failure mode this repo's conventions warn about — test membership, never
-`region_type == "x"` — and it has caused a real prioritization bug before.
+The two implementations disagreed on exactly this until the plugin moved here,
+which is the clearest argument for the move: the rule diverged precisely because
+it was stated on both sides of a repository boundary. `TestPrioritizationRule`
+checks the behaviour on the disputed row (`region_type="exonic"`,
+`in_promoter=True`) and cross-checks the two implementations against each other.
 
-The predicate is deliberately left as-is so that moving the plugin changes
-nothing observable. Fixing it changes prioritization output and is a separate,
-deliberate decision.
-
-Both sides are pinned by `TestKnownDivergence`, which fails the moment either
-changes. When they are reconciled, delete that test rather than updating it. The
-cheap fix is a boolean `in_promoter` annotation column, since the predicate DSL
-has comparison operators but no membership operator.
+`in_promoter` is a boolean the annotation source projects alongside
+`region_type`, so the predicate needs nothing new to read it.
 
 ## Migration status
 
@@ -154,10 +179,11 @@ has comparison operators but no membership operator.
 discovery order.
 
 `TestDropInParity` keeps that harmless by requiring the two to be
-indistinguishable: same model type, fold count, score columns, predicate SQL,
-per-model score entries, shard kinds, image names, and byte-identical argv for
-all three plan types.
+indistinguishable. It compares **whole plan objects** for all three plan types,
+not just argv — labels, resources, and declared transfers are observable
+orchestration behaviour too, since a shard that requests the wrong GPU pool or
+omits an input transfer is a different shard however identical its command line.
 
-To complete the move, delete `lava-core`'s `CHROMBPNET` entry point and its
-`lava_core/plugins/model/chrombpnet.py`, then delete `TestDropInParity` here —
-it exists only to compare against a copy that will no longer exist.
+To complete the move: delete `lava-core`'s `CHROMBPNET` entry point and its
+`lava_core/plugins/model/chrombpnet.py`, then delete `TestDropInParity` here — it
+exists only to compare against a copy that will no longer exist.

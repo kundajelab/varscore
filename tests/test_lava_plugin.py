@@ -1,17 +1,13 @@
-"""Tests for the orchestration plugin in ``varscore.lava``.
+"""Tests for the orchestration plugin in ``varscore.lava.chrombpnet``.
 
-The point of these tests is the argv contract. An orchestration platform runs
-varscore by constructing ``python -m <module> <flags>`` and handing it to a
-container; nothing type-checks that argv, so a renamed flag used to surface as an
-argparse usage error inside a GPU container, minutes into a job. Here the plugin
-that builds the argv and the parsers that consume it are in the same repository,
-so the two can be checked against each other directly -- ``TestArgvContract`` runs
-every command the plugin emits through the real parser.
+Covers what needs the framework installed: whole plans, the prioritization
+predicate, and parity with the copy still shipped in ``lava-core``. The argv
+contract itself is framework-free and tested in ``test_lava_commands.py``, which
+runs in every install -- keep new argv checks there, not here, so they stay
+enforced by ordinary CI.
 
-Everything here needs ``lava-core`` (varscore's ``[lava]`` extra, Python 3.12
-only), so the whole module skips when it is not installed. A base install must
-still collect cleanly, which is why the imports are guarded rather than
-top-level.
+This module needs ``lava-core`` (``requirements-lava.txt``, Python 3.12 only) and
+skips without it, so the imports are guarded rather than top-level.
 """
 
 from __future__ import annotations
@@ -19,7 +15,7 @@ from __future__ import annotations
 import pytest
 
 
-pytest.importorskip("lava_core", reason="requires varscore's [lava] extra (Python 3.12)")
+pytest.importorskip("lava_core", reason="needs lava-core; see requirements-lava.txt (Python 3.12)")
 
 from lava_core.plugins.execution import PathResolver  # noqa: E402
 from lava_core.plugins.model import (  # noqa: E402
@@ -53,12 +49,12 @@ def resolver() -> PathResolver:
     return PathResolver(MOUNT)
 
 
-def _scoring_request(resolver: PathResolver, **artifact: object) -> ScoringRequest:
+def _scoring_request(resolver: PathResolver) -> ScoringRequest:
     return ScoringRequest(
         job_id=JOB_ID,
         model_id=MODEL_ID,
         genome_label=GENOME,
-        artifact={"model_accession_pattern": PATTERN, **artifact},
+        artifact={"model_accession_pattern": PATTERN},
         resolver=resolver,
         layout=ScoringLayout(),
     )
@@ -85,8 +81,8 @@ def _interpretation_request(resolver: PathResolver) -> InterpretationRequest:
     )
 
 
-def _all_task_argvs(plugin: ChromBPNetPlugin, resolver: PathResolver) -> list[list[str]]:
-    """Every container argv the plugin can emit, across all three plan types."""
+def _all_tasks(plugin: ChromBPNetPlugin, resolver: PathResolver) -> list:
+    """Every container task the plugin can emit, across all three plan types."""
     scoring = plugin.build_scoring_plan(_scoring_request(resolver))
     interpretation = plugin.build_interpretation_plan(_interpretation_request(resolver))
     preprocessing = plugin.build_preprocessing_plan(_preprocessing_request(resolver))
@@ -99,95 +95,152 @@ def _all_task_argvs(plugin: ChromBPNetPlugin, resolver: PathResolver) -> list[li
         *interpretation.motif.values(),
         interpretation.plot,
     ]
-    return [list(task.command) for task in tasks if task is not None]
+    return [t for t in tasks if t is not None]
 
 
-class TestArgvContract:
-    """Every command the plugin emits must be one varscore actually accepts."""
+class TestPlanArgv:
+    """Plan-level checks. Per-command flag detail lives in ``test_lava_commands.py``."""
 
-    def test_every_varscore_argv_parses(self, plugin: ChromBPNetPlugin, resolver: PathResolver) -> None:
-        argvs = [a for a in _all_task_argvs(plugin, resolver) if commands.is_varscore_command(a)]
-        # Guard against the assertion passing vacuously if the filter over-matches.
-        assert len(argvs) == 1 + commands.NUM_FOLDS * 2 + 3, "expected folds x2 + summarize + ingest + average + plot"
-        for argv in argvs:
-            commands.validate_argv(argv)
+    def test_every_varscore_argv_in_every_plan_parses(self, plugin: ChromBPNetPlugin, resolver: PathResolver) -> None:
+        commands.validate_all(list(t.command) for t in _all_tasks(plugin, resolver))
 
-    def test_plan_covers_every_documented_command(self, plugin: ChromBPNetPlugin, resolver: PathResolver) -> None:
+    def test_plans_cover_every_documented_command(self, plugin: ChromBPNetPlugin, resolver: PathResolver) -> None:
         """``COMMANDS`` and the plans must not drift apart in either direction."""
-        emitted = {a[0] for a in _all_task_argvs(plugin, resolver) if commands.is_varscore_command(a)}
+        emitted = {t.command[0] for t in _all_tasks(plugin, resolver) if commands.is_varscore_command(t.command)}
         assert emitted == set(commands.COMMANDS)
 
-    def test_motif_task_is_not_a_varscore_command(self, plugin: ChromBPNetPlugin, resolver: PathResolver) -> None:
+    def test_motif_task_belongs_to_another_tool(self, plugin: ChromBPNetPlugin, resolver: PathResolver) -> None:
         """Motif hit-calling runs finemo in its own image, so it is out of scope here."""
         plan = plugin.build_interpretation_plan(_interpretation_request(resolver))
         for task in plan.motif.values():
             assert not commands.is_varscore_command(list(task.command))
             assert task.image != VARSCORE_IMAGE
 
-    def test_score_flags_carry_the_intended_paths(self, plugin: ChromBPNetPlugin, resolver: PathResolver) -> None:
-        """Parsing is necessary but not sufficient -- two swapped paths still parse."""
-        layout = ScoringLayout()
-        shard = plugin.build_scoring_plan(_scoring_request(resolver)).shards[3]
-        args = commands.validate_argv(list(shard.command))
-        assert args.model_loc == f"{MOUNT}/{layout.fold_model_file(MODEL_ID, 3, '.h5')}"
-        assert args.peaks_dist_loc == f"{MOUNT}/{layout.peak_distribution_file(MODEL_ID, 3)}"
-        assert args.genome_loc == f"{MOUNT}/{layout.genome_fasta(GENOME)}"
-        assert args.variants_loc == f"{MOUNT}/{layout.model_variants_file(JOB_ID, MODEL_ID)}"
-        assert args.out_path == f"{MOUNT}/{layout.fold_score_file(JOB_ID, MODEL_ID, 3)}"
-
-    def test_unknown_command_is_rejected(self) -> None:
-        with pytest.raises(commands.ArgvContractError, match="not a varscore command"):
-            commands.validate_argv(["varscore.scoring.chrombpnet.nope", "-m", "x"])
-
-    def test_bad_flag_is_rejected(self) -> None:
-        with pytest.raises(commands.ArgvContractError, match="rejected its arguments"):
-            commands.validate_argv([commands.SCORE, "--not-a-real-flag", "x"])
-
-    def test_missing_required_flag_is_rejected(self) -> None:
-        with pytest.raises(commands.ArgvContractError, match="rejected its arguments"):
-            commands.validate_argv([commands.SCORE, "-m", "x"])
-
-
-class TestFoldCount:
-    """``num_folds`` is pinned by the CLI, not a free parameter."""
-
-    def test_plugin_agrees_with_the_cli_constant(self, plugin: ChromBPNetPlugin) -> None:
-        assert plugin.num_folds == commands.NUM_FOLDS
-
-    @pytest.mark.parametrize(
-        ("module", "suffix"),
-        [
-            (commands.INGEST, "_loc"),
-            (commands.PREDICTIONS, "_scores_loc"),
-            (commands.AVERAGE_INTERPRETATIONS, "_dir"),
-        ],
-    )
-    def test_fold_consuming_commands_require_exactly_num_folds(self, module: str, suffix: str) -> None:
-        """These commands declare one required flag per fold, so the count is structural.
-
-        A model scored with a different number of folds could not be passed to
-        them at all -- there is no flag to put the sixth fold on, and omitting one
-        of the five fails as a missing required argument.
-        """
-        parser = commands.parser_for(module)
-        fold_flags = {a.dest for a in parser._actions if a.dest.startswith("fold_") and a.dest.endswith(suffix)}
-        assert fold_flags == {f"fold_{i}{suffix}" for i in range(commands.NUM_FOLDS)}
-        assert all(a.required for a in parser._actions if a.dest in fold_flags)
-
-    def test_plan_shard_count_matches(self, plugin: ChromBPNetPlugin, resolver: PathResolver) -> None:
+    def test_fold_shard_count_matches_the_cli_constant(
+        self, plugin: ChromBPNetPlugin, resolver: PathResolver
+    ) -> None:
         plan = plugin.build_scoring_plan(_scoring_request(resolver))
+        assert plugin.num_folds == commands.NUM_FOLDS
         assert len(plan.shards) == commands.NUM_FOLDS
         assert plan.ready_when == commands.NUM_FOLDS
 
 
-class TestDropInParity:
-    """varscore's plugin must behave identically to the one currently shipped in ``lava-core``.
+class TestPrioritizationRule:
+    """The promoter test must read membership, never the collapsed label.
 
-    Both are registered for ``CHROMBPNET`` while the plugin is moving from one to
-    the other, and which of the two an environment resolves depends on entry-point
-    discovery order. These tests keep that ambiguity harmless by requiring the two
-    to be indistinguishable, and they are what makes it safe to delete the
-    ``lava-core`` copy. Delete this class along with it.
+    ``region_type`` is a single severity-collapsed label, so a variant that is
+    both exonic and in a promoter reports ``exonic``. Testing
+    ``region_type == 'promoter'`` therefore drops its promoter membership and
+    fails to prioritize it -- a bug this repo has hit before, and the reason
+    ``varscore.prioritization`` tests the ``in_promoter`` flag. Both statements of
+    the rule must agree.
+    """
+
+    def _evaluate(self, plugin: ChromBPNetPlugin, **row: object) -> bool:
+        return plugin.prioritize_predicate().to_python()(row)
+
+    def test_exonic_variant_in_a_promoter_is_prioritized(self, plugin: ChromBPNetPlugin) -> None:
+        """The regression. Under the old ``region_type`` form this returned False."""
+        assert self._evaluate(
+            plugin,
+            logfc=-0.5,
+            active_allele_quantile=0.9,
+            in_peak=False,
+            in_promoter=True,
+            region_type="exonic",
+        )
+
+    def test_promoter_route_is_not_reachable_via_region_type(self, plugin: ChromBPNetPlugin) -> None:
+        """A promoter ``region_type`` with the flag unset must not prioritize.
+
+        Guards against reintroducing the collapsed-label test as an extra
+        alternative, which would make the rule pass for the wrong reason.
+        """
+        assert not self._evaluate(
+            plugin,
+            logfc=-0.5,
+            active_allele_quantile=0.9,
+            in_peak=False,
+            in_promoter=False,
+            region_type="promoter",
+        )
+
+    def test_predicate_sql_reads_in_promoter(self, plugin: ChromBPNetPlugin) -> None:
+        sql = plugin.prioritize_predicate().to_sql()
+        assert "in_promoter" in sql
+        assert "region_type" not in sql
+
+    def test_agrees_with_the_in_process_rule(self, plugin: ChromBPNetPlugin) -> None:
+        """Cross-check against ``varscore.prioritization`` on the disputed case.
+
+        The two implementations of this rule are written for different engines --
+        a pandas expression and a pushed-down predicate -- so this compares
+        outcomes on the row that used to distinguish them, rather than comparing
+        source text.
+        """
+        import pandas as pd
+
+        from varscore import prioritization
+
+        db = pd.DataFrame(
+            [
+                {
+                    "variant_id": "v1",
+                    "chr": "chr1",
+                    "pos": 100,
+                    "ref": "A",
+                    "alt": "T",
+                    "region_type": "exonic",
+                    "in_promoter": True,
+                    "model_id": MODEL_ID,
+                    "logfc": -0.5,
+                    "active_allele_quantile": 0.9,
+                    "in_peak": False,
+                }
+            ]
+        )
+        pandas_result = bool(prioritization.prioritize_variants(db)["prioritized"].iloc[0])
+        predicate_result = self._evaluate(
+            plugin,
+            logfc=-0.5,
+            active_allele_quantile=0.9,
+            in_peak=False,
+            in_promoter=True,
+            region_type="exonic",
+        )
+        assert pandas_result == predicate_result is True
+
+    @pytest.mark.parametrize(
+        ("row", "expected"),
+        [
+            # Effect too small.
+            ({"logfc": 0.1, "active_allele_quantile": 0.9, "in_peak": True, "in_promoter": False}, False),
+            # Allele not active enough.
+            ({"logfc": 1.0, "active_allele_quantile": 0.01, "in_peak": True, "in_promoter": False}, False),
+            # In a called peak.
+            ({"logfc": 1.0, "active_allele_quantile": 0.9, "in_peak": True, "in_promoter": False}, True),
+            # Outside a peak but gaining accessibility.
+            ({"logfc": 1.0, "active_allele_quantile": 0.9, "in_peak": False, "in_promoter": False}, True),
+            # Outside a peak and losing accessibility, not a promoter.
+            ({"logfc": -1.0, "active_allele_quantile": 0.9, "in_peak": False, "in_promoter": False}, False),
+        ],
+    )
+    def test_thresholds(self, plugin: ChromBPNetPlugin, row: dict, expected: bool) -> None:
+        assert self._evaluate(plugin, region_type="intergenic", **row) is expected
+
+
+class TestDropInParity:
+    """varscore's plugin must be indistinguishable from the copy in ``lava-core``.
+
+    Both are registered for ``CHROMBPNET`` while the plugin moves from one to the
+    other, and which an environment resolves depends on entry-point discovery
+    order. These tests keep that ambiguity harmless, and they are what makes it
+    safe to delete the ``lava-core`` copy. Delete this class along with it.
+
+    Comparison is over whole plan objects, not just argv: labels, resources, and
+    declared transfers are observable orchestration behaviour too -- a shard that
+    requests the wrong GPU pool or omits an input transfer is a different shard,
+    however identical its command line.
     """
 
     @pytest.fixture
@@ -216,67 +269,67 @@ class TestDropInParity:
 
         assert {k.value for k in ShardKind} == {k.value for k in reference_module.ShardKind}
 
-    def test_same_images(self, plugin: ChromBPNetPlugin, reference) -> None:
+    def test_same_images(self) -> None:
         from lava_core.plugins.model import chrombpnet as reference_module
 
         assert VARSCORE_IMAGE == reference_module.VARSCORE_IMAGE
 
-    @pytest.mark.parametrize("plan_kind", ["scoring", "preprocessing", "interpretation"])
-    def test_same_emitted_argv(
-        self, plugin: ChromBPNetPlugin, reference, resolver: PathResolver, plan_kind: str
+    def test_whole_scoring_plan_is_identical(
+        self, plugin: ChromBPNetPlugin, reference, resolver: PathResolver
     ) -> None:
-        """Byte-for-byte argv parity, which is what a drop-in replacement means here."""
-        if plan_kind == "scoring":
-            mine = plugin.build_scoring_plan(_scoring_request(resolver))
-            theirs = reference.build_scoring_plan(_scoring_request(resolver))
-            assert [s.command for s in mine.shards] == [s.command for s in theirs.shards]
-            assert mine.summarize.command == theirs.summarize.command
-        elif plan_kind == "preprocessing":
-            assert (
-                plugin.build_preprocessing_plan(_preprocessing_request(resolver)).job.command
-                == reference.build_preprocessing_plan(_preprocessing_request(resolver)).job.command
+        mine = plugin.build_scoring_plan(_scoring_request(resolver))
+        theirs = reference.build_scoring_plan(_scoring_request(resolver))
+        assert mine == theirs
+
+    def test_whole_preprocessing_plan_is_identical(
+        self, plugin: ChromBPNetPlugin, reference, resolver: PathResolver
+    ) -> None:
+        mine = plugin.build_preprocessing_plan(_preprocessing_request(resolver))
+        theirs = reference.build_preprocessing_plan(_preprocessing_request(resolver))
+        assert mine == theirs
+
+    def test_whole_interpretation_plan_is_identical(
+        self, plugin: ChromBPNetPlugin, reference, resolver: PathResolver
+    ) -> None:
+        mine = plugin.build_interpretation_plan(_interpretation_request(resolver))
+        theirs = reference.build_interpretation_plan(_interpretation_request(resolver))
+        assert mine == theirs
+
+    def test_plan_equality_is_meaningful(self, plugin: ChromBPNetPlugin, resolver: PathResolver) -> None:
+        """Guard the three tests above against passing because ``==`` is identity-ish.
+
+        Frozen dataclasses holding lists compare structurally, but if any plan
+        member fell back to object identity the comparisons would be vacuously
+        true for two separately-built plans. Two independent builds of the *same*
+        plan must be equal, and a plan built from a different request must not be.
+        """
+        a = plugin.build_scoring_plan(_scoring_request(resolver))
+        b = plugin.build_scoring_plan(_scoring_request(resolver))
+        assert a == b
+
+        other = plugin.build_scoring_plan(
+            ScoringRequest(
+                job_id="job-2",
+                model_id=MODEL_ID,
+                genome_label=GENOME,
+                artifact={"model_accession_pattern": PATTERN},
+                resolver=resolver,
+                layout=ScoringLayout(),
             )
-        else:
-            mine = plugin.build_interpretation_plan(_interpretation_request(resolver))
-            theirs = reference.build_interpretation_plan(_interpretation_request(resolver))
-            assert [s.command for s in mine.folds] == [s.command for s in theirs.folds]
-            assert mine.average.command == theirs.average.command
-            assert mine.plot.command == theirs.plot.command
-            assert {k: v.command for k, v in mine.motif.items()} == {k: v.command for k, v in theirs.motif.items()}
+        )
+        assert a != other
 
-
-class TestKnownDivergence:
-    """Pins a real disagreement between the two implementations of the same rule.
-
-    varscore states the ChromBPNet prioritization rule twice: once as a pandas
-    expression in ``varscore.prioritization``, for scoring in-process, and once as
-    a predicate here, for a platform to push into SQL. They should agree. They do
-    not: the pandas version tests the ``in_promoter`` membership flag, while the
-    predicate tests ``region_type == 'promoter'``.
-
-    ``region_type`` is a severity-collapsed single label, so a variant that is both
-    exonic and in a promoter reports ``region_type == 'exonic'`` and fails the
-    predicate's promoter test, while passing the pandas one. varscore's own
-    conventions call for testing membership for exactly this reason.
-
-    The predicate is deliberately left matching ``lava-core`` for now, so that
-    moving the plugin changes nothing observable (see ``TestDropInParity``).
-    Fixing it is a separate, behaviour-changing decision. This test fails the
-    moment someone changes one side, which is the point: it makes the divergence
-    impossible to lose track of, and it should be deleted -- not updated -- once
-    both sides agree.
-    """
-
-    def test_predicate_still_reads_region_type(self, plugin: ChromBPNetPlugin) -> None:
-        sql = plugin.prioritize_predicate().to_sql()
-        assert "region_type" in sql
-        assert "in_promoter" not in sql
-
-    def test_pandas_rule_still_reads_in_promoter(self) -> None:
-        import inspect
-
-        from varscore import prioritization
-
-        source = inspect.getsource(prioritization.prioritize_variants)
-        assert "in_promoter" in source
-        assert "region_type" not in source
+    def test_task_resources_and_labels_match(
+        self, plugin: ChromBPNetPlugin, reference, resolver: PathResolver
+    ) -> None:
+        """Explicit per-field check, so a failure names what diverged."""
+        mine = _all_tasks(plugin, resolver)
+        theirs = _all_tasks(reference, resolver)
+        assert len(mine) == len(theirs)
+        for a, b in zip(mine, theirs):
+            assert a.kind == b.kind
+            assert a.image == b.image
+            assert a.labels == b.labels
+            assert a.resources == b.resources
+            assert a.inputs == b.inputs
+            assert a.outputs == b.outputs

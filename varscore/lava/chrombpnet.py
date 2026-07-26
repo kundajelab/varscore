@@ -15,8 +15,9 @@ container image and an argv and carry no filesystem paths of their own: each pat
 comes from a base-relative layout combined with the execution backend's path
 resolver, so one plan runs unchanged wherever the platform schedules it.
 
-Installing varscore's ``[lava]`` extra registers this class automatically through
-the ``lava.model_plugins`` entry point.
+Installing ``lava-core`` alongside varscore (see ``requirements-lava.txt``)
+registers this class automatically through the ``lava.model_plugins`` entry
+point.
 """
 
 from __future__ import annotations
@@ -157,11 +158,15 @@ class ChromBPNetPlugin(ModelPlugin):
             raise ValueError(msg)
         pattern = artifact.model_accession_pattern
 
-        command = [commands.INGEST, "-g", r.resolve(layout.genome_fasta(genome))]
-        for fold in range(self.num_folds):
-            command += [f"-f{fold}", r.resolve(layout.fold_model_file(model_id, fold, ext_for_fold(pattern, fold)))]
-        command += ["-p", r.resolve(layout.peaks_file(model_id, ext_for_peaks(artifact.peaks_path)))]
-        command += ["-o", r.resolve(layout.model_dir(model_id))]
+        command = commands.ingest_argv(
+            genome=r.resolve(layout.genome_fasta(genome)),
+            fold_models=[
+                r.resolve(layout.fold_model_file(model_id, fold, ext_for_fold(pattern, fold)))
+                for fold in range(self.num_folds)
+            ],
+            peaks=r.resolve(layout.peaks_file(model_id, ext_for_peaks(artifact.peaks_path))),
+            out_dir=r.resolve(layout.model_dir(model_id)),
+        )
 
         job = ContainerTaskSpec(
             kind=ShardKind.MODEL_PREPROCESSING.value,
@@ -195,19 +200,13 @@ class ChromBPNetPlugin(ModelPlugin):
             model_logical = layout.fold_model_file(model_id, fold, ext_for_fold(pattern, fold))
             peaks_dist_logical = layout.peak_distribution_file(model_id, fold)
             output_logical = layout.fold_score_file(job_id, model_id, fold)
-            command = [
-                commands.SCORE,
-                "-m",
-                r.resolve(model_logical),
-                "-p",
-                r.resolve(peaks_dist_logical),
-                "-g",
-                r.resolve(genome_logical),
-                "-v",
-                r.resolve(variants_logical),
-                "-o",
-                r.resolve(output_logical),
-            ]
+            command = commands.score_argv(
+                model=r.resolve(model_logical),
+                peak_distribution=r.resolve(peaks_dist_logical),
+                genome=r.resolve(genome_logical),
+                variants=r.resolve(variants_logical),
+                out=r.resolve(output_logical),
+            )
             shards.append(
                 ContainerTaskSpec(
                     kind=ShardKind.SCORING_FOLDS.value,
@@ -236,10 +235,11 @@ class ChromBPNetPlugin(ModelPlugin):
         dna_tree_logical = layout.dna_tree_file(model_id)
         summarize_out_logical = layout.scoring_result_file(job_id, model_id)
         fold_score_logicals = [layout.fold_score_file(job_id, model_id, f) for f in range(self.num_folds)]
-        predictions_command = [commands.PREDICTIONS]
-        for f, logical in enumerate(fold_score_logicals):
-            predictions_command += [f"-f{f}", r.resolve(logical)]
-        predictions_command += ["-p", r.resolve(dna_tree_logical), "-o", r.resolve(summarize_out_logical)]
+        predictions_command = commands.predictions_argv(
+            fold_scores=[r.resolve(logical) for logical in fold_score_logicals],
+            peaks_dnatree=r.resolve(dna_tree_logical),
+            out=r.resolve(summarize_out_logical),
+        )
         summarize = ContainerTaskSpec(
             kind=ShardKind.SCORING_SUMMARIZATION.value,
             image=VARSCORE_IMAGE,
@@ -274,17 +274,12 @@ class ChromBPNetPlugin(ModelPlugin):
 
         folds: list[ContainerTaskSpec] = []
         for fold in range(self.num_folds):
-            command = [
-                commands.INTERPRETATION,
-                "-m",
-                r.resolve(layout.fold_model_file(model_id, fold, ext_for_fold(pattern, fold))),
-                "-g",
-                genome_arg,
-                "-v",
-                variants_arg,
-                "-o",
-                r.resolve(layout.fold_results_dir(run_id, model_id, fold)),
-            ]
+            command = commands.interpretation_argv(
+                model=r.resolve(layout.fold_model_file(model_id, fold, ext_for_fold(pattern, fold))),
+                genome=genome_arg,
+                variants=variants_arg,
+                out_dir=r.resolve(layout.fold_results_dir(run_id, model_id, fold)),
+            )
             folds.append(
                 ContainerTaskSpec(
                     kind=ShardKind.INTERPRETATION_FOLDS.value,
@@ -301,10 +296,10 @@ class ChromBPNetPlugin(ModelPlugin):
                 )
             )
 
-        average_command = [commands.AVERAGE_INTERPRETATIONS]
-        for f in range(self.num_folds):
-            average_command += [f"-f{f}", r.resolve(layout.fold_results_dir(run_id, model_id, f))]
-        average_command += ["-o", r.resolve(layout.model_dir(run_id, model_id))]
+        average_command = commands.average_interpretations_argv(
+            fold_dirs=[r.resolve(layout.fold_results_dir(run_id, model_id, f)) for f in range(self.num_folds)],
+            out_dir=r.resolve(layout.model_dir(run_id, model_id)),
+        )
         average = ContainerTaskSpec(
             kind=ShardKind.INTERPRETATION_AVERAGE.value,
             image=VARSCORE_IMAGE,
@@ -342,15 +337,11 @@ class ChromBPNetPlugin(ModelPlugin):
                 resources=_INTERPRET_RESOURCES,
             )
 
-        plot_command = [
-            commands.PREPARE_VARIANT_PLOTTING,
-            "-v",
-            variants_arg,
-            "-p",
-            r.resolve(layout.model_dir(run_id, model_id)),
-            "-o",
-            r.resolve(layout.variants_with_plots_file(run_id, model_id)),
-        ]
+        plot_command = commands.prepare_variant_plotting_argv(
+            variants=variants_arg,
+            plotting_data_dir=r.resolve(layout.model_dir(run_id, model_id)),
+            out=r.resolve(layout.variants_with_plots_file(run_id, model_id)),
+        )
         plot = ContainerTaskSpec(
             kind=ShardKind.INTERPRETATION_PLOT.value,
             image=VARSCORE_IMAGE,
@@ -386,20 +377,20 @@ class ChromBPNetPlugin(ModelPlugin):
         render it to SQL and filter server-side or apply it row-wise in Python and
         get the same answer either way.
 
-        Note: the promoter test reads ``region_type``, which is a severity-collapsed
-        single label. ``varscore.prioritization`` -- the in-process implementation
-        of this same rule -- tests the ``in_promoter`` membership flag instead,
-        because collapsing hides a promoter label under a higher-severity one. The
-        two therefore disagree for a variant that is both exonic and in a promoter.
-        This form is kept for now so the two ways of running the rule stay
-        byte-comparable; ``tests/test_lava_plugin.py`` pins the divergence so it
-        cannot be lost track of.
+        The promoter test reads the ``in_promoter`` membership flag, matching
+        ``varscore.prioritization`` -- the in-process implementation of this same
+        rule. It must not read ``region_type``: that column is a single
+        severity-collapsed label, so a variant that is both exonic and in a
+        promoter reports ``exonic`` and its promoter membership disappears. A
+        variant carries a *set* of region labels and membership is the only sound
+        way to test one, which is why the two implementations of this rule are
+        written against the same flag.
         """
         return And(
             Ge(Abs(Col("logfc")), Lit(0.25)),
             Ge(Col("active_allele_quantile"), Lit(0.05)),
             Or(
-                Eq(Col("region_type"), Lit("promoter")),
+                Eq(Col("in_promoter"), Lit(True)),
                 Eq(Col("in_peak"), Lit(True)),
                 And(Eq(Col("in_peak"), Lit(False)), Gt(Col("logfc"), Lit(0))),
             ),

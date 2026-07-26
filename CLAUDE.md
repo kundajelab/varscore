@@ -110,16 +110,22 @@ read `region_utils.x` / `io_utils.x` even though the modules now live under
   `score.py`, `predictions.py`, `ingest.py`, `interpret/`) — the TF/`[model]` path.
 - `prioritization.py` — turns a variant×model score DB into prioritized calls.
   **Note:** the same rule is stated a second time as a predicate in
-  `lava/chrombpnet.py`, and the two currently disagree on the promoter test
-  (`in_promoter` here vs `region_type == 'promoter'` there). Pinned by
-  `TestKnownDivergence`; see `docs/lava.md`.
-- `lava/` — the `ModelPlugin` a `lava-core` orchestration platform uses to drive
-  varscore, plus `commands.py`, which states the `python -m` argv contract once
-  and validates it against the real argparse parsers. **The only subpackage that
-  imports `lava-core`**; optional, Python 3.12 only, installed from
-  `requirements-lava.txt` (deliberately *not* a pyproject extra — see
-  `docs/lava.md`). Every CLI entrypoint exposes `build_parser()` for this, so
-  those modules must stay importable without the `[model]` extra.
+  `lava/chrombpnet.py`. Both must test the `in_promoter` flag, never
+  `region_type == 'promoter'`; they diverged on exactly this once. See
+  `docs/lava.md`.
+- `lava/` — the integration with a `lava-core` orchestration platform, in two
+  halves, and the split matters:
+  - `commands.py` — the `python -m` argv contract: builder per command plus
+    `validate_argv`. **Imports no orchestration framework**, so its tests run in
+    every install and are the always-on gate against a renamed flag. Build argv
+    with the builders, never by hand.
+  - `chrombpnet.py` — the `ModelPlugin`. The only module importing `lava-core`
+    (optional, Python 3.12 only, from `requirements-lava.txt` — deliberately
+    *not* a pyproject extra, see `docs/lava.md`). Resolved lazily via a module
+    `__getattr__` so `varscore.lava` imports without it; don't make that eager.
+
+  Every ChromBPNet CLI entrypoint exposes `build_parser()` for this, so those
+  modules must stay importable without the `[model]` extra.
 - `scripts/` — download + construct scripts for the gitignored data artifacts.
 - `tests/` — pytest; region/filter tests monkeypatch the annotator so they don't
   need the built parquet.
