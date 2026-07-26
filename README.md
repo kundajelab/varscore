@@ -69,6 +69,7 @@ uv run python -m varscore.scripts.construct_variants_df
 - [Docker](docs/docker.md) — building/running the published image and its data
 - [Region classification](docs/region_classification.md) — region labels, setup, and scorer routing
 - [AlphaMissense](docs/alphamissense.md) — setup and variant scoring
+- [Orchestration integration](docs/lava.md) — driving varscore from a `lava-core` platform
 
 ## Docker
 
