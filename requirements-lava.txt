@@ -1,0 +1,19 @@
+# Dependencies for the orchestration integration in `varscore/lava/`.
+#
+# Kept out of pyproject.toml on purpose. `lava-core` is a source dependency that
+# requires Python >=3.12, and uv builds a source dependency's metadata using an
+# interpreter valid for varscore's own floor (3.9), so declaring it as an extra
+# makes `uv lock` unsatisfiable for every contributor -- including those who never
+# touch this integration. Keeping it in a separate file means the resolver never
+# sees it unless you ask for it.
+#
+# Install on Python 3.12 (the only version both packages support -- lava-core
+# needs >=3.12, varscore supports <3.13):
+#
+#     pip install -r requirements-lava.txt
+#
+# `lava-core` lives in a private repository, so this resolves only with read
+# access to it; without access pip fails with an authentication error. It is not
+# published to any public index. See docs/lava.md.
+
+lava-core @ git+ssh://git@github.com/kundajelab/lava.git@main#subdirectory=lava-core

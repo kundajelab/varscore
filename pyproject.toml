@@ -48,6 +48,16 @@ conservation = [
 	"pysam>=0.22.1",
 	"pybigwig>=0.3.22",
 ]
+# NOTE: the orchestration integration (`varscore/lava/`, entry point below) needs
+# `lava-core`, which is deliberately NOT declared here. It is a source dependency
+# requiring Python >=3.12, and uv builds a source dependency's metadata with an
+# interpreter satisfying *this project's* floor (3.9) -- so declaring it makes
+# `uv lock` unsatisfiable for every contributor, on every Python version, whether
+# or not they want the integration. It also lives in a private repository, which
+# would make locking fail outright for anyone without read access to it.
+#
+# Install it separately instead: `pip install -r requirements-lava.txt` on Python
+# 3.12. See docs/lava.md.
 
 [build-system]
 requires = ["setuptools >= 61.0"]
@@ -59,6 +69,16 @@ exclude = ["tests*"]
 
 [tool.setuptools.package-data]
 varscore = ["data/gene_df.tsv"]
+
+# Advertises varscore's ChromBPNet plugin to a `lava-core` platform, which
+# discovers model architectures through this entry-point group. Declaring it is
+# free: it is inert metadata unless something actually resolves the group, so it
+# costs nothing in the scoring container (which has no `lava-core` installed and
+# never looks). Loading it there would fail, and `lava-core`'s registry records a
+# failed entry point rather than propagating it, so an install without the
+# `[lava]` extra stays healthy.
+[project.entry-points."lava.model_plugins"]
+CHROMBPNET = "varscore.lava.chrombpnet:ChromBPNetPlugin"
 
 # Dev tooling (uv-native; installed in CI via `uv sync --dev`).
 [dependency-groups]
