@@ -81,6 +81,14 @@ whole DataFrame for compatibility. Large-file callers must use
 `preprocessing.streaming.iter_input_occurrence_batches` or the preprocessing
 pipeline.
 
+## Augmented VCF export
+
+`python -m varscore.export.augmented_vcf` consumes ordinal-partitioned
+Parquet buckets, streams the immutable input through htslib, and adds
+versioned `LAVA1_*` INFO fields aligned with ALT order. It writes a BGZF VCF,
+CSI index, and checksum manifest. The default profile emits bounded headline
+annotations; full per-model INFO entries require `--include-model-scores`.
+
 ## Custom variant IDs
 
 The source identifier is preserved through compatibility outputs and the
