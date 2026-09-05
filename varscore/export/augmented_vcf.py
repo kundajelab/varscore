@@ -95,6 +95,7 @@ def write_augmented_vcf(
     ingest_manifest: str,
     output_vcf: str,
     output_manifest: str,
+    results_parquet_uri: str,
     include_model_scores: bool = False,
 ) -> dict:
     """Write BGZF VCF + CSI and atomically publish a checksummed manifest."""
@@ -189,6 +190,7 @@ def write_augmented_vcf(
         "alt_occurrence_count": alts_written,
         "augmented_vcf": _file_metadata(output_path),
         "csi_index": _file_metadata(Path(f"{output_path}.csi")),
+        "results_parquet": {"uri": results_parquet_uri},
         "include_model_scores": include_model_scores,
         "models": models,
     }
@@ -533,6 +535,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--ingest-manifest", required=True)
     parser.add_argument("--output-vcf", required=True)
     parser.add_argument("--output-manifest", required=True)
+    parser.add_argument("--results-parquet-uri", required=True)
     parser.add_argument("--include-model-scores", action="store_true")
     return parser.parse_args()
 
@@ -546,7 +549,8 @@ def main() -> None:
         args.ingest_manifest,
         args.output_vcf,
         args.output_manifest,
-        args.include_model_scores,
+        args.results_parquet_uri,
+        include_model_scores=args.include_model_scores,
     )
 
 

@@ -95,9 +95,11 @@ def test_writer_preserves_records_and_aligns_per_alt_results(tmp_path: Path) -> 
         str(ingest),
         str(output),
         str(output_manifest),
+        "gs://test-bucket/jobs/job-1/augmentation/buckets/run=test-run",
     )
 
     assert result["record_count"] == 2
+    assert result["results_parquet"]["uri"].endswith("run=test-run")
     assert output.exists()
     assert Path(f"{output}.csi").exists()
     with pysam.VariantFile(str(output)) as augmented:
@@ -125,6 +127,7 @@ def test_writer_preserves_records_and_aligns_per_alt_results(tmp_path: Path) -> 
         str(ingest),
         str(second_output),
         str(tmp_path / "second-manifest.json"),
+        "gs://test-bucket/jobs/job-1/augmentation/buckets/run=test-run",
     )
     with pysam.VariantFile(str(second_output)) as augmented_again:
         model_headers = [
