@@ -1,63 +1,96 @@
-# VCF / gVCF Input
+# VCF input
 
-varscore accepts **VCF and gVCF** as an alternative to the canonical headerless
-variant TSV (`chr, pos, ref, alt[, variant_id]` — `core.io.VARIANT_SCHEMA`). VCF
-support is an **entry-point adapter**: the file is parsed into the canonical
-variant table, and the rest of the pipeline (validate → region filter → scorers →
-prioritization) is unchanged.
+The preprocessing pipeline accepts coordinate-sorted VCF and BGZF-compressed
+VCF as alternatives to the canonical headerless variant TSV
+(`chr, pos, ref, alt[, variant_id]`). Binary BCF and gVCF are not supported.
 
-Format loading lives in the IO layer: `core.io.read_variants(path, fmt="auto")`
-is the format-neutral entry point, dispatching to the per-format adapters
-`core.io.load_variants` (TSV) and `core.io.load_variants_vcf` (VCF/gVCF). The
-parser is pure Python and adds **no new dependency** — stdlib `gzip` reads both
-plain `.vcf` and bgzipped `.vcf.gz` (bgzip is a valid gzip stream).
+The production path uses htslib through `pysam` and processes a configurable
+number of ALT occurrences at a time. It does not load the input file into one
+DataFrame. TSV rows pass through the same occurrence contract.
 
 ## Usage
 
-Standalone conversion to the canonical TSV:
-
 ```bash
-python -m varscore.preprocessing.vcf -v input.vcf.gz -o variants.tsv
+python -m varscore.preprocessing.pipeline \
+    -i input.vcf.gz \
+    -g genome.fa \
+    -f auto \
+    -o valid.tsv \
+    --invalid-out invalid.tsv \
+    --region-out-dir regions/ \
+    --occurrence-out-dir ingest/occurrences/ \
+    --canonical-out-dir ingest/canonical/valid/ \
+    --invalid-parquet-out-dir ingest/canonical/invalid/ \
+    --manifest-out ingest/manifest.json \
+    --header-out ingest/header.vcf
 ```
 
-Or pass a VCF straight to validation / the full preprocessing pipeline via the
-`--format` flag (defaults to `auto`, which detects by extension):
+The artifact arguments are optional for older callers. When omitted, the
+pipeline writes them under an `ingest/` directory beside `valid.tsv`.
 
-```bash
-python -m varscore.preprocessing.validate -v input.vcf.gz -g genome.fa -f auto ...
-python -m varscore.preprocessing.pipeline -i input.vcf.gz -g genome.fa -f auto \
-    -o valid.tsv --invalid-out invalid.tsv --region-out-dir regions/
-```
+## Outputs
 
-`-f/--format` accepts `auto`, `tsv`, or `vcf`.
+The compatibility outputs remain available:
 
-## What the parser does
+- `valid.tsv`: headerless `chr, pos, ref, alt, source_variant_id` rows;
+- `invalid.tsv`: diagnostic rows with stable error codes;
+- bounded region-category TSVs for existing scorers.
 
-- **Multi-allelic split.** A site with `ALT = A,AT` becomes one canonical row per
-  ALT allele.
-- **Symbolic / non-variant alleles dropped.** `<NON_REF>`, `<*>`, `<DEL>` (and any
-  other `<...>` form), the spanning-deletion `*`, breakend notation (`[`/`]`), and
-  monomorphic `ALT == REF` rows are filtered out — these dominate **gVCF reference
-  blocks** and would otherwise explode into millions of non-variant rows. The
-  dropped count is logged.
-- **1-based POS** is kept as-is (matches `pos`).
-- **`ID`** is carried into `variant_id`; `ID == "."` becomes missing.
-- **Chromosome naming passes through untouched.** Bare `1` → `chr1` normalization
-  and the ACGT/genome checks happen downstream in `core/io.validate_variant`, so a
-  non-ACGT or otherwise invalid allele lands in the *invalid* output with a proper
-  error reason — exactly as it would from a TSV input.
+The durable outputs are:
 
-## Limitations
+- occurrence Parquet shards with `(record_ordinal, alt_index)` identity and one
+  row for every ALT, including unsupported alleles;
+- canonical Parquet shards for scoreable alleles;
+- invalid Parquet shards;
+- the parsed source header;
+- a manifest containing input/header digests, counts, shard integrity metadata,
+  reference build, and canonicalizer version.
 
-- **No binary BCF.** Convert first: `bcftools view in.bcf -Oz -o out.vcf.gz`. A
-  `.bcf` path raises a clear error.
-- **INFO / FORMAT / genotypes are ignored.** A multi-sample VCF is treated as a
-  list of sites × ALT alleles, not per-sample calls.
-- **Whole-file in memory.** Like the TSV loader, the parser returns one DataFrame;
-  `validate` then batches at 250k. Fine for typical inputs.
+Each Parquet shard is atomically renamed into place and has a sibling success
+marker containing its row count, byte size, and SHA-256 digest. The final
+manifest is the completion marker for the ingest as a whole.
+
+## Semantics
+
+- A multi-allelic VCF record produces one occurrence per ALT in original order.
+- Duplicate records remain duplicate occurrences. Canonical scoring identity is
+  `chr:pos:ref:alt`, and downstream consumers may select it distinctly.
+- VCF `ID` and an optional fifth TSV column become `source_variant_id`.
+- Spanning-deletion `*`, symbolic structural variants, breakends, and
+  `ALT == REF` remain in the occurrence relation with `UNSUPPORTED` status and a
+  precise error code. They are not sent to scoring.
+- Bare chromosomes are normalized during reference validation. POS remains
+  one-based.
+- INFO, FORMAT, and samples are not copied into the canonical relation. The
+  immutable source VCF retains them for occurrence-aware augmented output.
+
+## Rejections
+
+- gVCF declarations (`##GVCFBlock*` or `##ALT=<ID=NON_REF,...>`) are rejected
+  from the parsed header before output sinks are allocated.
+- Undeclared gVCF input fails on the first `<NON_REF>`, legacy `<*>`, or
+  `END > POS` reference block without a concrete ALT.
+- Ordinary symbolic structural variants with `END` and spanning-deletion `*`
+  are not misclassified as gVCF.
+- Unsorted VCF records are rejected because augmented output includes a CSI
+  random-access index.
+- BCF is rejected with an instruction to convert it first.
+
+The older `core.io.read_variants` and `load_variants_vcf` APIs still return a
+whole DataFrame for compatibility. Large-file callers must use
+`preprocessing.streaming.iter_input_occurrence_batches` or the preprocessing
+pipeline.
+
+## Augmented VCF export
+
+`python -m varscore.export.augmented_vcf` consumes ordinal-partitioned
+Parquet buckets, streams the immutable input through htslib, and adds
+versioned `LAVA1_*` INFO fields aligned with ALT order. It writes a BGZF VCF,
+CSI index, and checksum manifest. The default profile emits bounded headline
+annotations; full per-model INFO entries require `--include-model-scores`.
 
 ## Custom variant IDs
 
-The VCF parser captures the `ID` column into `variant_id` (`.` → blank), and that
-id is preserved end-to-end through preprocessing, scoring, prioritization, and
-annotation. See [variant_id.md](variant_id.md).
+The source identifier is preserved through compatibility outputs and the
+occurrence relation. It is not the canonical scoring key. See
+[variant_id.md](variant_id.md).

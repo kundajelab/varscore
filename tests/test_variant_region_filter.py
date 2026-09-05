@@ -4,6 +4,7 @@ region_annotations_batch is monkeypatched so these don't depend on the built
 region_annotations.parquet — we feed controlled label sets and assert each
 variant lands in exactly the right (overlapping) set of category files.
 """
+
 import pandas as pd
 import pytest
 
@@ -12,11 +13,11 @@ import varscore.preprocessing.region_filter as vrf
 
 # variant_id -> region labels the (mocked) annotator should return for it.
 LABELS_BY_VARIANT = {
-    "v_cds":    ["splice_site", "cds", "splice_region", "exonic"],  # CDS exon edge
-    "v_prom":   ["promoter"],
+    "v_cds": ["splice_site", "cds", "splice_region", "exonic"],  # CDS exon edge
+    "v_prom": ["promoter"],
     "v_intron": ["intronic"],
-    "v_5utr":   ["five_prime_utr", "exonic"],
-    "v_inter":  ["intergenic"],
+    "v_5utr": ["five_prime_utr", "exonic"],
+    "v_inter": ["intergenic"],
 }
 
 VARIANTS = [
@@ -32,7 +33,8 @@ _POS_TO_ID = {pos: vid for _, pos, _, _, vid in VARIANTS}
 
 def _ann(labels):
     return region_utils.RegionAnnotation(
-        labels=labels, gene_ids=["G1"] if labels != ["intergenic"] else [],
+        labels=labels,
+        gene_ids=["G1"] if labels != ["intergenic"] else [],
         primary=labels[0],
     )
 
@@ -49,6 +51,7 @@ def variants_tsv(tmp_path):
 def mock_annotator(monkeypatch):
     def fake_batch(chroms, starts, ends):
         return [_ann(LABELS_BY_VARIANT[_POS_TO_ID[int(p)]]) for p in starts]
+
     monkeypatch.setattr(region_utils, "region_annotations_batch", fake_batch)
 
 
@@ -62,20 +65,20 @@ def _ids_in(out_dir, category):
 
 def test_overlapping_routing(variants_tsv, tmp_path):
     out_dir = tmp_path / "regions"
-    counts = vrf.filter_variants_by_region(variants_tsv, str(out_dir))
+    counts = vrf.filter_variants_by_region(variants_tsv, str(out_dir), batch_size=2)
 
     expected = {
-        "coding":          {"v_cds"},
-        "exonic":          {"v_cds", "v_5utr"},
-        "five_prime_utr":  {"v_5utr"},
+        "coding": {"v_cds"},
+        "exonic": {"v_cds", "v_5utr"},
+        "five_prime_utr": {"v_5utr"},
         "three_prime_utr": set(),
-        "splice":          {"v_cds"},
-        "splice_site":     {"v_cds"},
-        "splice_region":   {"v_cds"},
-        "intronic":        {"v_intron"},
-        "promoter":        {"v_prom"},
-        "noncoding_gene":  set(),
-        "genic":           {"v_cds", "v_intron", "v_5utr"},   # promoter & intergenic excluded
+        "splice": {"v_cds"},
+        "splice_site": {"v_cds"},
+        "splice_region": {"v_cds"},
+        "intronic": {"v_intron"},
+        "promoter": {"v_prom"},
+        "noncoding_gene": set(),
+        "genic": {"v_cds", "v_intron", "v_5utr"},  # promoter & intergenic excluded
     }
     for cat, ids in expected.items():
         assert _ids_in(out_dir, cat) == ids, cat
