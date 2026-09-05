@@ -13,6 +13,7 @@ from typing import Dict, Iterator, List, Mapping, Optional, Sequence
 
 import pandas as pd
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import pysam
 
@@ -107,6 +108,9 @@ def write_augmented_vcf(
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
 
     ingest = json.loads(Path(ingest_manifest).read_text())
+    source_sha256 = _sha256(Path(input_vcf))
+    if source_sha256 != ingest["input_sha256"]:
+        raise AugmentationError("Input VCF checksum does not match the ingest manifest")
     models = _load_models(Path(models_json))
     row_iter = iter_bucket_rows(
         Path(bucket_dir), _writer_columns(models, include_model_scores)
@@ -185,7 +189,7 @@ def write_augmented_vcf(
 
     result = {
         "schema_version": "lava-augmented-vcf-v1",
-        "source_input_sha256": ingest["input_sha256"],
+        "source_input_sha256": source_sha256,
         "record_count": records_written,
         "alt_occurrence_count": alts_written,
         "augmented_vcf": _file_metadata(output_path),
@@ -225,11 +229,14 @@ def iter_bucket_rows(
             if len(tables) > 1
             else tables[0]
         )
-        frame = table.to_pandas().sort_values(
-            ["record_ordinal", "alt_index"], kind="stable"
+        order = pc.sort_indices(
+            table,
+            sort_keys=[("record_ordinal", "ascending"), ("alt_index", "ascending")],
         )
-        for row in frame.to_dict(orient="records"):
-            yield {key: _none_if_missing(value) for key, value in row.items()}
+        sorted_table = table.take(order)
+        for batch in sorted_table.to_batches(max_chunksize=1024):
+            for row in batch.to_pylist():
+                yield {key: _none_if_missing(value) for key, value in row.items()}
 
 
 def _writer_columns(

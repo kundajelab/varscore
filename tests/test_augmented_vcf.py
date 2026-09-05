@@ -1,10 +1,12 @@
+import hashlib
 import json
 from pathlib import Path
 
 import pandas as pd
 import pysam
+import pytest
 
-from varscore.export.augmented_vcf import write_augmented_vcf
+from varscore.export.augmented_vcf import AugmentationError, write_augmented_vcf
 
 
 def _write_fixture(path: Path) -> None:
@@ -18,6 +20,28 @@ chr1\t10\trs1\tA\tC,G\t42\tPASS\tKEEP=yes\tGT\t1|2
 chr1\t20\t.\tT\t*\t.\t.\t.\tGT\t0/1
 """
     )
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_writer_rejects_input_that_does_not_match_ingest_checksum(tmp_path: Path) -> None:
+    source = tmp_path / "source.vcf"
+    _write_fixture(source)
+    ingest = tmp_path / "ingest.json"
+    ingest.write_text(json.dumps({"input_sha256": "0" * 64}))
+
+    with pytest.raises(AugmentationError, match="checksum"):
+        write_augmented_vcf(
+            str(source),
+            str(tmp_path / "buckets"),
+            str(tmp_path / "models.json"),
+            str(ingest),
+            str(tmp_path / "augmented.vcf.gz"),
+            str(tmp_path / "manifest.json"),
+            "gs://test-bucket/results",
+        )
 
 
 def test_writer_preserves_records_and_aligns_per_alt_results(tmp_path: Path) -> None:
@@ -82,7 +106,7 @@ def test_writer_preserves_records_and_aligns_per_alt_results(tmp_path: Path) -> 
     ingest = tmp_path / "ingest.json"
     ingest.write_text(
         json.dumps(
-            {"input_sha256": "a" * 64, "record_count": 2, "alt_occurrence_count": 3}
+            {"input_sha256": _sha256(source), "record_count": 2, "alt_occurrence_count": 3}
         )
     )
     output = tmp_path / "augmented.vcf.gz"
@@ -120,11 +144,17 @@ def test_writer_preserves_records_and_aligns_per_alt_results(tmp_path: Path) -> 
         assert [record.id for record in indexed.fetch("chr1", 9, 11)] == ["rs1"]
 
     second_output = tmp_path / "augmented-again.vcf.gz"
+    second_ingest = tmp_path / "second-ingest.json"
+    second_ingest.write_text(
+        json.dumps(
+            {"input_sha256": _sha256(output), "record_count": 2, "alt_occurrence_count": 3}
+        )
+    )
     write_augmented_vcf(
         str(output),
         str(buckets.parent),
         str(models),
-        str(ingest),
+        str(second_ingest),
         str(second_output),
         str(tmp_path / "second-manifest.json"),
         "gs://test-bucket/jobs/job-1/augmentation/buckets/run=test-run",
