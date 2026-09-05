@@ -107,7 +107,9 @@ def write_augmented_vcf(
 
     ingest = json.loads(Path(ingest_manifest).read_text())
     models = _load_models(Path(models_json))
-    row_iter = iter_bucket_rows(Path(bucket_dir))
+    row_iter = iter_bucket_rows(
+        Path(bucket_dir), _writer_columns(models, include_model_scores)
+    )
     next_row = next(row_iter, None)
     records_written = 0
     alts_written = 0
@@ -194,7 +196,9 @@ def write_augmented_vcf(
     return result
 
 
-def iter_bucket_rows(bucket_root: Path) -> Iterator[dict]:
+def iter_bucket_rows(
+    bucket_root: Path, requested_columns: Sequence[str]
+) -> Iterator[dict]:
     """Yield rows in strict occurrence order while retaining only one bucket."""
     buckets = []
     for path in bucket_root.glob("bucket=*"):
@@ -207,7 +211,13 @@ def iter_bucket_rows(bucket_root: Path) -> Iterator[dict]:
             raise AugmentationError(
                 f"Augmentation bucket has no Parquet parts: {bucket}"
             )
-        tables = [pq.ParquetFile(part).read() for part in parts]
+        tables = []
+        for part in parts:
+            parquet = pq.ParquetFile(part)
+            columns = [
+                name for name in requested_columns if name in parquet.schema.names
+            ]
+            tables.append(parquet.read(columns=columns))
         table = (
             pa.concat_tables(tables, promote_options="default")
             if len(tables) > 1
@@ -218,6 +228,45 @@ def iter_bucket_rows(bucket_root: Path) -> Iterator[dict]:
         )
         for row in frame.to_dict(orient="records"):
             yield {key: _none_if_missing(value) for key, value in row.items()}
+
+
+def _writer_columns(
+    models: Sequence[Mapping[str, str]], include_model_scores: bool
+) -> List[str]:
+    columns = [
+        "record_ordinal",
+        "alt_index",
+        "status",
+        "error_code",
+        "result_variant_id",
+        "prioritized",
+        "most_active_celltype",
+        "region_type",
+        "nearest_genes",
+        "ccre",
+        "af_global",
+        "cadd_phred",
+        "am_pathogenicity",
+        "am_class",
+        "revel_score",
+    ]
+    score_names = (
+        (
+            "logfc",
+            "jsd",
+            "active_allele_quantile",
+            "in_peak",
+            "prioritized",
+        )
+        if include_model_scores
+        else ("logfc",)
+    )
+    columns.extend(
+        f"{model['column_prefix']}_{score_name}"
+        for model in models
+        for score_name in score_names
+    )
+    return columns
 
 
 def _load_models(path: Path) -> List[dict]:
