@@ -18,12 +18,12 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 import numpy as np
+import pandas as pd
 
 import varscore.core.io as io_utils
 import varscore.annotation.regions as region_utils
 from varscore.core.logging import (
     get_logger,
-    log_progress,
     log_timing,
     setup_logging,
 )
@@ -42,31 +42,39 @@ logger = get_logger(__name__)
 # Labels that lie within the transcribed gene body. Promoter is upstream of the
 # TSS (regulatory, not transcribed) and intergenic is no gene at all, so both are
 # excluded from "genic".
-GENE_BODY_LABELS = frozenset({
-    "cds", "exonic", "five_prime_utr", "three_prime_utr",
-    "intronic", "splice_site", "splice_region", "noncoding_gene",
-})
+GENE_BODY_LABELS = frozenset(
+    {
+        "cds",
+        "exonic",
+        "five_prime_utr",
+        "three_prime_utr",
+        "intronic",
+        "splice_site",
+        "splice_region",
+        "noncoding_gene",
+    }
+)
 
 # category name -> predicate over a variant's set of region labels.
 # A variant is written to every category whose predicate returns True.
 CATEGORY_RULES = {
     # protein-coding territory -> AlphaMissense
-    "coding":          lambda L: "cds" in L,
-    "exonic":          lambda L: "exonic" in L,            # protein-coding exon umbrella
-    "five_prime_utr":  lambda L: "five_prime_utr" in L,
+    "coding": lambda L: "cds" in L,
+    "exonic": lambda L: "exonic" in L,  # protein-coding exon umbrella
+    "five_prime_utr": lambda L: "five_prime_utr" in L,
     "three_prime_utr": lambda L: "three_prime_utr" in L,
     # splice territory -> SpliceAI
-    "splice":          lambda L: ("splice_site" in L) or ("splice_region" in L),
-    "splice_site":     lambda L: "splice_site" in L,       # canonical +/-2bp
-    "splice_region":   lambda L: "splice_region" in L,     # wider window
+    "splice": lambda L: ("splice_site" in L) or ("splice_region" in L),
+    "splice_site": lambda L: "splice_site" in L,  # canonical +/-2bp
+    "splice_region": lambda L: "splice_region" in L,  # wider window
     # other gene / regulatory territory
-    "intronic":        lambda L: "intronic" in L,
-    "promoter":        lambda L: "promoter" in L,
-    "noncoding_gene":  lambda L: "noncoding_gene" in L,
+    "intronic": lambda L: "intronic" in L,
+    "promoter": lambda L: "promoter" in L,
+    "noncoding_gene": lambda L: "noncoding_gene" in L,
     # gene-body umbrella (any transcribed feature; excludes promoter/intergenic)
-    "genic":           lambda L: not L.isdisjoint(GENE_BODY_LABELS),
+    "genic": lambda L: not L.isdisjoint(GENE_BODY_LABELS),
     # variants that mapped to no annotated region ("what didn't map"); off by default
-    "intergenic":      lambda L: not (L - {"intergenic"}),
+    "intergenic": lambda L: not (L - {"intergenic"}),
 }
 # Note: there is deliberately no "noncoding" category. "Not coding" is ambiguous
 # under multi-transcript union and is the wrong axis for chromatin models like
@@ -106,9 +114,7 @@ def filter_variants_by_region(
     categories = categories or DEFAULT_CATEGORIES
     unknown = [c for c in categories if c not in CATEGORY_RULES]
     if unknown:
-        raise ValueError(
-            f"Unknown categories {unknown}. Valid: {list(CATEGORY_RULES)}"
-        )
+        raise ValueError(f"Unknown categories {unknown}. Valid: {list(CATEGORY_RULES)}")
 
     start_time = datetime.now()
     logger.info("Starting variant region filtering")
@@ -119,35 +125,39 @@ def filter_variants_by_region(
 
     os.makedirs(out_dir, exist_ok=True)
 
-    logger.info("Loading variants...")
-    variant_df = io_utils.load_variants(variants_loc)
-    total_variants = len(variant_df)
-    logger.info(f"Loaded {total_variants} variants")
-
     paths = {c: os.path.join(out_dir, f"{c}.tsv") for c in categories}
     counts = {c: 0 for c in categories}
     # Truncate-and-open one handle per category; rows are appended per batch so
     # we never hold the whole (overlapping) output set in memory at once.
     handles = {c: open(paths[c], "w") for c in categories}
+    processed = 0
     try:
         logger.info(f"Processing variants in batches of {batch_size}...")
-        for start_idx in range(0, total_variants, batch_size):
-            end_idx = min(start_idx + batch_size, total_variants)
-            batch_df = variant_df.iloc[start_idx:end_idx]
+        try:
+            batches = pd.read_csv(
+                variants_loc,
+                sep="\t",
+                names=io_utils.VARIANT_SCHEMA,
+                chunksize=batch_size,
+                dtype={"chr": str},
+            )
+            for batch_df in batches:
+                label_sets = _batch_label_sets(batch_df)
+                for cat in categories:
+                    rule = CATEGORY_RULES[cat]
+                    mask = np.fromiter(
+                        (rule(s) for s in label_sets), dtype=bool, count=len(label_sets)
+                    )
+                    if not mask.any():
+                        continue
+                    selected = batch_df[mask]
+                    selected.to_csv(handles[cat], sep="\t", index=False, header=False)
+                    counts[cat] += len(selected)
 
-            label_sets = _batch_label_sets(batch_df)
-            for cat in categories:
-                rule = CATEGORY_RULES[cat]
-                mask = np.fromiter(
-                    (rule(s) for s in label_sets), dtype=bool, count=len(label_sets)
-                )
-                if not mask.any():
-                    continue
-                selected = batch_df[mask]
-                selected.to_csv(handles[cat], sep="\t", index=False, header=False)
-                counts[cat] += len(selected)
-
-            log_progress(logger, end_idx, total_variants, "Region filtering")
+                processed += len(batch_df)
+                logger.info("Region filtering processed %d variants.", processed)
+        except pd.errors.EmptyDataError:
+            logger.warning("No valid variants to route by region.")
     finally:
         for handle in handles.values():
             handle.close()
@@ -207,11 +217,15 @@ def _parse_args():
         )
     )
     parser.add_argument(
-        "-v", "--variants_loc", required=True,
+        "-v",
+        "--variants_loc",
+        required=True,
         help="Location of the variants file (TSV with chr, pos, ref, alt columns).",
     )
     parser.add_argument(
-        "-o", "--out_dir", required=True,
+        "-o",
+        "--out_dir",
+        required=True,
         help="Directory to write <category>.tsv files into.",
     )
     parser.add_argument(
@@ -222,7 +236,10 @@ def _parse_args():
         ),
     )
     parser.add_argument(
-        "-b", "--batch_size", type=int, default=250000,
+        "-b",
+        "--batch_size",
+        type=int,
+        default=250000,
         help="Number of variants to process at once (default: 250000).",
     )
     return parser.parse_args()

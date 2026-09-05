@@ -8,7 +8,7 @@ scoring, prioritization, annotation), so outputs can be joined back to your inpu
 ## Where the id comes from
 
 - **TSV input:** the 5th column.
-- **VCF/gVCF input:** the `ID` field (`.` → blank). See [vcf.md](vcf.md).
+- **VCF input:** the `ID` field (`.` → blank). See [vcf.md](vcf.md). gVCF is rejected by the streaming pipeline.
 - **No id supplied:** the 5th column is left **blank** — no synthetic id is
   generated. (Provide your own ids if you need a guaranteed unique handle, e.g.
   for prioritization grouping; otherwise variants stay distinct by

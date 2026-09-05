@@ -65,15 +65,12 @@ contract; a model scorer like `scoring/chrombpnet/` swaps the parquet lookup for
   custom id rides through validate → region_filter → scorers → prioritization (and
   `annotate.py`) without stripping/reattaching. Blank when none is supplied; no
   synthetic id is generated. See `docs/variant_id.md`.
-- **VCF/gVCF input** is accepted at the entry point via
-  `core.io.read_variants(path, fmt="auto")` — the format-neutral loader that
-  dispatches to `load_variants` (TSV) / `load_variants_vcf` (VCF). It's wired into
-  the `-f/--format` flag on `validate`/`pipeline`, converting to the canonical
-  table above so everything downstream is unchanged. Pure-Python (stdlib `gzip`,
-  **no new dep**, reads `.vcf`/`.vcf.gz`); splits multi-allelic sites and drops
-  symbolic alleles (`<NON_REF>`, `<*>`, `*`, breakends). No `.bcf`. The VCF `ID` is
-  captured into `variant_id` and preserved end-to-end — see `docs/vcf.md` and
-  `docs/variant_id.md`.
+- **VCF input** in the preprocessing pipeline uses the bounded htslib path in
+  `preprocessing.streaming`; it reads `.vcf`/`.vcf.gz`, preserves every ALT as an
+  occurrence, and writes canonical/occurrence Parquet shards plus compatibility
+  TSVs. gVCF, BCF, and unsorted VCF are rejected. The older `core.io.read_variants`
+  API remains whole-DataFrame compatibility code and must not be used for large
+  files. See `docs/vcf.md` and `docs/variant_id.md`.
 - **Chromosome naming:** datasets use UCSC-style `chr1` / `chrM`; lookups
   normalize bare `1` / `MT` to the `chr` form. Caveat: a bare-chr value that
   slips past normalization classifies silently as `intergenic` — no error.
@@ -95,7 +92,7 @@ read `region_utils.x` / `io_utils.x` even though the modules now live under
 `annotation/` / `core/`.
 
 - `core/` — `io.py` (`VARIANT_SCHEMA`; variant + sequence IO: `load_variants`
-  (TSV), `load_variants_vcf` (VCF/gVCF), the `read_variants` format dispatcher,
+  (TSV), compatibility `load_variants_vcf` (VCF), the `read_variants` format dispatcher,
   and `validate_variant`), `logging.py`. TF-free, depended on by everything;
   depends on nothing internal.
 - `annotation/` — `annotate.py` (`AnnotatedVariant` + the annotation chain),
