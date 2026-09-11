@@ -1,0 +1,23 @@
+# Reuse the existing, immutable Ensembl release-116 region table without
+# carrying its TensorFlow/ChromBPNet runtime into the final image. Rebuilding
+# this large static table on every code release is slow and memory intensive.
+FROM kundajelab/varscore@sha256:c0bfc3136c636f2472fe38c85334b8c4f07c7e727006447e7db5cdb9f7a4ffcb AS reference_data
+
+# Lightweight image for bounded-memory VCF ingest, region routing, family
+# evidence export, and augmented-VCF writing. These paths do not need the
+# TensorFlow/ChromBPNet stack carried by the model-scoring image.
+FROM python:3.12-slim
+
+WORKDIR /code
+
+COPY pyproject.toml ./
+RUN mkdir -p varscore && touch varscore/__init__.py \
+    && pip install --no-cache-dir .
+
+COPY . .
+
+COPY --from=reference_data \
+    /code/varscore/data/region_annotations.parquet \
+    /code/varscore/data/region_annotations.parquet
+
+ENTRYPOINT ["python", "-m"]
