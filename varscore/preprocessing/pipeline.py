@@ -8,6 +8,7 @@ files (coding, splice, promoter, intronic, ...) for downstream scoring.
 import argparse
 from pathlib import Path
 
+from varscore.annotation.family import export_family_evidence, load_family_context
 from varscore.preprocessing.region_filter import filter_variants_by_region
 from varscore.preprocessing.streaming import stream_validate_variants
 
@@ -30,6 +31,8 @@ def preprocess_variants(
     manifest_out_path: str = None,
     header_out_path: str = None,
     batch_size: int = 250000,
+    family_phenopacket_path: str = None,
+    family_out_path: str = None,
 ) -> None:
     """Preprocess variants through validation and region filtering.
 
@@ -47,6 +50,8 @@ def preprocess_variants(
         manifest_out_path: Path for the checksummed ingest manifest.
         header_out_path: Path for the parsed source VCF header.
         batch_size: Maximum occurrence rows retained by one ingest batch.
+        family_phenopacket_path: Optional GA4GH Family JSON for sample/pedigree binding.
+        family_out_path: Gzip-compressed family evidence TSV output path.
     """
     logger.info("Starting variant preprocessing.")
 
@@ -58,6 +63,14 @@ def preprocess_variants(
     )
     manifest_out_path = manifest_out_path or str(artifact_root / "manifest.json")
     header_out_path = header_out_path or str(artifact_root / "header.vcf")
+
+    family_context = None
+    if family_phenopacket_path:
+        if fmt not in {"auto", "vcf"}:
+            raise ValueError("Family analysis requires VCF input.")
+        if not family_out_path:
+            raise ValueError("--family-out is required with --family-phenopacket.")
+        family_context = load_family_context(family_phenopacket_path, variants_loc)
 
     result = stream_validate_variants(
         variants_loc,
@@ -71,6 +84,7 @@ def preprocess_variants(
         header_out_path,
         batch_size=batch_size,
         fmt=fmt,
+        target_sample=family_context.proband.sample_id if family_context else None,
     )
 
     logger.info(
@@ -99,6 +113,9 @@ def preprocess_variants(
     else:
         logger.warning("No valid variants to filter by region.")
 
+    if family_context is not None:
+        export_family_evidence(variants_loc, family_context, family_out_path)
+
 
 def main():
     args = _parse_args()
@@ -106,19 +123,21 @@ def main():
         [c.strip() for c in args.categories.split(",")] if args.categories else None
     )
     preprocess_variants(
-        args.input,
-        args.genome,
-        args.valid_out,
-        args.invalid_out,
-        args.region_out_dir,
-        categories,
-        args.format,
-        args.occurrence_out_dir,
-        args.canonical_out_dir,
-        args.invalid_parquet_out_dir,
-        args.manifest_out_path,
-        args.header_out_path,
-        args.batch_size,
+        variants_loc=args.input,
+        genome_loc=args.genome,
+        valid_out_path=args.valid_out,
+        invalid_out_path=args.invalid_out,
+        region_out_dir=args.region_out_dir,
+        categories=categories,
+        fmt=args.format,
+        occurrence_out_dir=args.occurrence_out_dir,
+        canonical_out_dir=args.canonical_out_dir,
+        invalid_parquet_out_dir=args.invalid_parquet_out_dir,
+        manifest_out_path=args.manifest_out_path,
+        header_out_path=args.header_out_path,
+        batch_size=args.batch_size,
+        family_phenopacket_path=args.family_phenopacket_path,
+        family_out_path=args.family_out_path,
     )
 
 
@@ -194,6 +213,16 @@ def _parse_args():
         type=int,
         default=250000,
         help="Maximum occurrence rows held by an ingest batch (default: 250000).",
+    )
+    parser.add_argument(
+        "--family-phenopacket",
+        dest="family_phenopacket_path",
+        help="GA4GH Family Phenopacket JSON describing the VCF sample bindings.",
+    )
+    parser.add_argument(
+        "--family-out",
+        dest="family_out_path",
+        help="Output .tsv.gz containing proband-carried family genotype evidence.",
     )
     return parser.parse_args()
 

@@ -9,6 +9,7 @@ import pytest
 from varscore.preprocessing.streaming import (
     CANONICALIZER_VERSION,
     GVCF_UNSUPPORTED_ERROR_CODE,
+    NOT_CARRIED_BY_TARGET_ERROR_CODE,
     OCCURRENCE_COLUMNS,
     VariantIngestError,
     inspect_vcf_header,
@@ -70,6 +71,26 @@ def test_occurrence_batches_keep_alt_order_duplicates_and_unsupported_alleles(
     ]
     assert rows["error_code"].tolist()[-2:] == ["SYMBOLIC_ALT", "SPANNING_DELETION"]
     assert batches[-1].records_seen == 3
+
+
+def test_target_sample_only_marks_carried_alt_as_scoreable(tmp_path):
+    path = tmp_path / "family.vcf"
+    path.write_text(
+        "##fileformat=VCFv4.2\n"
+        "##contig=<ID=chr1,length=200>\n"
+        "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
+        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tchild\tparent\n"
+        "chr1\t20\t.\tT\tC,G\t50\tPASS\t.\tGT\t0/2\t0/1\n"
+    )
+
+    rows = next(
+        iter_input_occurrence_batches(
+            str(path), "vcf", batch_rows=10, target_sample="child"
+        )
+    ).rows
+
+    assert rows["status"].tolist() == ["UNSUPPORTED", "PENDING"]
+    assert rows["error_code"].tolist() == [NOT_CARRIED_BY_TARGET_ERROR_CODE, None]
 
 
 @pytest.mark.parametrize(
@@ -141,6 +162,7 @@ def test_streaming_validation_writes_fixed_schema_shards_and_manifest(
     assert result.valid_occurrence_count == 4
     assert result.invalid_occurrence_count == 0
     assert result.unsupported_occurrence_count == 2
+    assert result.target_excluded_occurrence_count == 0
     assert result.unique_canonical_variants == 2
     assert result.duplicate_canonical_occurrences == 2
     assert len(result.occurrence_shards) == 3
