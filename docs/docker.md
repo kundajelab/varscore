@@ -39,6 +39,18 @@ Mount them and point the relevant entrypoint at the mount path:
 docker build -t kundajelab/varscore:dev -f Dockerfile .
 ```
 
+Preprocessing and augmented-VCF export do not need TensorFlow. Build their
+smaller release image separately and deploy it by immutable digest as
+`VARSCORE_STREAMING_IMAGE`:
+
+```bash
+docker build -t kundajelab/varscore:streaming -f Dockerfile.streaming .
+```
+
+The streaming image copies the Ensembl release-116 region table from the
+digest-pinned model image, so code-only releases do not rebuild that large
+static artifact or inherit the model image's TensorFlow runtime.
+
 Pin the Ensembl gene model with a build arg (defaults to release 116):
 
 ```bash
