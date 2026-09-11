@@ -30,6 +30,7 @@ logger = get_logger(__name__)
 
 CANONICALIZER_VERSION = "lava-vcf-v1"
 GVCF_UNSUPPORTED_ERROR_CODE = "UNSUPPORTED_GVCF"
+NOT_CARRIED_BY_TARGET_ERROR_CODE = "NOT_CARRIED_BY_TARGET"
 
 OCCURRENCE_COLUMNS = [
     "record_ordinal",
@@ -128,6 +129,7 @@ class StreamingIngestResult:
     valid_occurrence_count: int
     invalid_occurrence_count: int
     unsupported_occurrence_count: int
+    target_excluded_occurrence_count: int
     unique_canonical_variants: int
     duplicate_canonical_occurrences: int
     occurrence_shards: Sequence[ShardMetadata]
@@ -187,14 +189,20 @@ def iter_input_occurrence_batches(
     path: str,
     fmt: str = "auto",
     batch_rows: int = 250_000,
+    target_sample: Optional[str] = None,
 ) -> Iterator[OccurrenceBatch]:
     """Yield occurrence batches without retaining rows from earlier batches."""
     if batch_rows <= 0:
         raise ValueError("batch_rows must be positive")
     source_format = resolve_input_format(path, fmt)
     if source_format == "vcf":
-        yield from _iter_vcf_occurrence_batches(path, batch_rows)
+        yield from _iter_vcf_occurrence_batches(path, batch_rows, target_sample)
     else:
+        if target_sample is not None:
+            raise VariantIngestError(
+                "TARGET_SAMPLE_REQUIRES_VCF",
+                "A family target sample can only be applied to VCF input.",
+            )
         yield from _iter_tsv_occurrence_batches(path, batch_rows)
 
 
@@ -212,6 +220,7 @@ def stream_validate_variants(
     batch_size: int = 250_000,
     fmt: str = "auto",
     reference_build: str = "GRCh38",
+    target_sample: Optional[str] = None,
 ) -> StreamingIngestResult:
     """Validate batches and atomically publish occurrence and canonical shards."""
     source_format = resolve_input_format(variants_loc, fmt)
@@ -226,6 +235,7 @@ def stream_validate_variants(
                 reference_build,
                 str(width),
                 str(batch_size),
+                target_sample or "",
             ]
         )
     )
@@ -262,6 +272,7 @@ def stream_validate_variants(
     valid_occurrence_count = 0
     invalid_occurrence_count = 0
     unsupported_occurrence_count = 0
+    target_excluded_occurrence_count = 0
     first_invalid_batch = True
 
     Path(valid_out_path).write_text("")
@@ -269,7 +280,12 @@ def stream_validate_variants(
 
     with pyfaidx.Fasta(genome_loc) as genome:
         for shard_index, occurrence_batch in enumerate(
-            iter_input_occurrence_batches(variants_loc, source_format, batch_size)
+            iter_input_occurrence_batches(
+                variants_loc,
+                source_format,
+                batch_size,
+                target_sample=target_sample,
+            )
         ):
             record_count = max(record_count, occurrence_batch.records_seen)
             if occurrence_batch.rows.empty:
@@ -284,6 +300,9 @@ def stream_validate_variants(
             valid_occurrence_count += len(valid_rows)
             unsupported_occurrence_count += int(
                 (validated["status"] == "UNSUPPORTED").sum()
+            )
+            target_excluded_occurrence_count += int(
+                (validated["error_code"] == NOT_CARRIED_BY_TARGET_ERROR_CODE).sum()
             )
             invalid_occurrence_count += int(
                 validated["status"].isin(["REF_MISMATCH", "FAILED"]).sum()
@@ -351,6 +370,7 @@ def stream_validate_variants(
         valid_occurrence_count=valid_occurrence_count,
         invalid_occurrence_count=invalid_occurrence_count,
         unsupported_occurrence_count=unsupported_occurrence_count,
+        target_excluded_occurrence_count=target_excluded_occurrence_count,
         unique_canonical_variants=unique_canonical_variants,
         duplicate_canonical_occurrences=max(
             0, valid_occurrence_count - unique_canonical_variants
@@ -441,7 +461,7 @@ def validate_occurrence_batch(
 
 
 def _iter_vcf_occurrence_batches(
-    path: str, batch_rows: int
+    path: str, batch_rows: int, target_sample: Optional[str] = None
 ) -> Iterator[OccurrenceBatch]:
     inspect_vcf_header(path)
     rows: List[Tuple[object, ...]] = []
@@ -450,6 +470,11 @@ def _iter_vcf_occurrence_batches(
     last_yield_record_count = 0
     try:
         with pysam.VariantFile(path) as source:
+            if target_sample is not None and target_sample not in source.header.samples:
+                raise VariantIngestError(
+                    "TARGET_SAMPLE_NOT_FOUND",
+                    f"Target sample {target_sample!r} is absent from the VCF header.",
+                )
             for record_ordinal, record in enumerate(source):
                 _reject_gvcf_record(record, record_ordinal)
                 coordinate = (record.rid, record.pos)
@@ -465,6 +490,12 @@ def _iter_vcf_occurrence_batches(
                 record_count = record_ordinal + 1
                 for alt_index, alt in enumerate(record.alts or (), start=1):
                     error_code = _unsupported_alt_error(str(alt), record.ref)
+                    if (
+                        error_code is None
+                        and target_sample is not None
+                        and alt_index not in (record.samples[target_sample].get("GT") or ())
+                    ):
+                        error_code = NOT_CARRIED_BY_TARGET_ERROR_CODE
                     rows.append(
                         (
                             record_ordinal,
