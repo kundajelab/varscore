@@ -1381,7 +1381,7 @@ dev = [
 ]
 
 [[package]]
-name = "varscore-image-cherimoya"
+name = "varscore-runtime-cherimoya"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [

@@ -1412,7 +1412,7 @@ dev = [
 ]
 
 [[package]]
-name = "varscore-image-chrombpnet"
+name = "varscore-runtime-chrombpnet"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
