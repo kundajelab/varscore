@@ -31,10 +31,14 @@ keywords = ["variant scoring", "variant effect", "variant prioritization", "vari
 Repository = "https://github.com/kundajelab/varscore.git"
 Issues = "https://github.com/kundajelab/varscore/issues"
 
+[project.scripts]
+cherimoya-score = "varscore.scoring.cherimoya.cli:main"
+
 [project.optional-dependencies]
 # ChromBPNet model scoring + SHAP interpretation. Pins the legacy TensorFlow
 # stack, which constrains this extra to Python < 3.10 / Linux. Install only where
-# you actually run the model: `pip install varscore[model]`.
+# you actually run the model: `pip install varscore[model]`. Kept for installation
+# compatibility; `images/chrombpnet` is the canonical image dependency project.
 model = [
 	"tensorflow==2.8.1",
 	"tensorflow-probability==0.14.0",

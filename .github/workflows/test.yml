@@ -15,6 +15,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  image-locks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - project: images/chrombpnet
+            python-version: "3.9"
+          - project: images/cherimoya
+            python-version: "3.12"
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: astral-sh/setup-uv@v3
+      with:
+        version: "0.5.16"
+    - run: uv python install ${{ matrix.python-version }}
+    - name: Check independent image lockfile
+      run: uv lock --check --python ${{ matrix.python-version }}
+      working-directory: ${{ matrix.project }}
+
   test:
     runs-on: ubuntu-latest
 
@@ -66,6 +86,6 @@ jobs:
     - name: Import core API and assert it is TensorFlow-free
       run: |
         /tmp/clean/bin/python -c "import varscore; print('varscore', varscore.__version__)"
-        /tmp/clean/bin/python -c "import varscore.annotation.annotate, varscore.prioritization, varscore.preprocessing.validate, varscore.preprocessing.region_filter, varscore.preprocessing.pipeline, varscore.preprocessing.vcf, varscore.scoring.alphamissense.score, varscore.scoring.chrombpnet.score"
+        /tmp/clean/bin/python -c "import varscore.annotation.annotate, varscore.prioritization, varscore.preprocessing.validate, varscore.preprocessing.region_filter, varscore.preprocessing.pipeline, varscore.preprocessing.vcf, varscore.scoring.alphamissense.score, varscore.scoring.chrombpnet.score, varscore.scoring.cherimoya.core, varscore.scoring.cherimoya.cli"
         /tmp/clean/bin/python -c "import varscore.annotation.regions, varscore.core.io, varscore.annotation.maf, varscore.scoring.alphamissense.lookup"
         /tmp/clean/bin/python -c "import importlib.util, sys; assert importlib.util.find_spec('tensorflow') is None, 'TensorFlow leaked into the core install'; print('core install is TensorFlow-free')"

@@ -25,6 +25,8 @@ CORE_MODULES = [
     "varscore.preprocessing.vcf",
     "varscore.scoring.alphamissense.score",
     "varscore.scoring.chrombpnet.score",
+    "varscore.scoring.cherimoya.core",
+    "varscore.scoring.cherimoya.cli",
     "varscore.annotation.regions",
     "varscore.core.io",
     "varscore.annotation.maf",
@@ -50,11 +52,15 @@ def test_public_api_is_exported():
     import varscore
 
     for name in PUBLIC_API:
-        assert hasattr(varscore, name), f"varscore.{name} is missing from the public API"
+        assert hasattr(varscore, name), (
+            f"varscore.{name} is missing from the public API"
+        )
 
 
 def test_core_import_is_tensorflow_free():
     # Importing the whole core surface must not pull in TensorFlow.
     for module in CORE_MODULES:
         importlib.import_module(module)
-    assert "tensorflow" not in sys.modules, "TensorFlow leaked into the core import path"
+    assert "tensorflow" not in sys.modules, (
+        "TensorFlow leaked into the core import path"
+    )
