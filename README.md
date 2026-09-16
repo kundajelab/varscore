@@ -11,7 +11,9 @@ and modern Python:
 pip install varscore
 ```
 
-Heavy / platform-constrained functionality lives behind extras:
+Conservation functionality lives behind an extra. The legacy `model` extra remains temporarily for direct
+ChromBPNet installation compatibility, but production ML environments are independently locked under
+`images/`:
 
 ```bash
 pip install "varscore[model]"         # ChromBPNet model scoring + SHAP (legacy TensorFlow stack; Python < 3.10)
@@ -20,9 +22,8 @@ pip install "varscore[conservation]"  # CADD / PhyloP conservation lookups (pysa
 
 Bulk reference data is **not** bundled — build it with the
 `varscore/scripts/download_*` + `construct_*` pairs (see below and the
-per-dataset docs). For environments that can't satisfy the model extra (e.g.
-Kubernetes), use the published [Docker image](docs/docker.md) instead, which
-bundles the TensorFlow stack and the region-annotation data.
+per-dataset docs). For model execution, use the independently locked
+[ChromBPNet and Cherimoya images](docs/docker.md).
 
 ## Development setup
 Make sure you have `uv` installed. See [here](https://docs.astral.sh/uv/) for installation instructions.
@@ -66,19 +67,17 @@ uv run python -m varscore.scripts.construct_variants_df
 
 ## Documentation
 
-- [Docker](docs/docker.md) — building/running the published image and its data
+- [Model images](docs/docker.md) — independently locked ChromBPNet and Cherimoya runtimes
 - [Region classification](docs/region_classification.md) — region labels, setup, and scorer routing
 - [AlphaMissense](docs/alphamissense.md) — setup and variant scoring
 
-## Docker
+## Model images
 
-A published image bundles the TensorFlow / ChromBPNet stack and the
-region-annotation data so the full pipeline runs in environments that can't
-install the pinned TF versions (k8s, macOS arm64, modern Python). See
-[docs/docker.md](docs/docker.md) for build, run, and runtime-mount details.
+Each image has its own project and lockfile so incompatible ML stacks never share one dependency resolution.
+See [docs/docker.md](docs/docker.md) for build, run, and runtime-mount details.
 
 ```bash
-docker build -t kundajelab/varscore:dev -f Dockerfile .
+docker build -f images/chrombpnet/Dockerfile -t kundajelab/varscore:dev .
+docker build -f images/cherimoya/Dockerfile -t kundajelab/cherimoya:dev .
 docker run --rm kundajelab/varscore:dev varscore.preprocessing.region_filter --help  # sanity check before pushing
-docker push kundajelab/varscore:dev
 ```
