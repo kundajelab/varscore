@@ -11,6 +11,7 @@ build/
 *.pyc
 plot_dir*/
 raw/
+tmp/
 
 # Stray scoring output
 results.tsv

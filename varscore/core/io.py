@@ -352,6 +352,177 @@ def load_variants_vcf(path: str) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=VARIANT_SCHEMA)
 
 
+def _parse_gt_indices(gt: Optional[str]):
+    """Parse a VCF ``GT`` string into a list of allele indices.
+
+    ``"0/1"`` -> ``[0, 1]``, ``"1|2"`` -> ``[1, 2]``, ``"./."`` -> ``None``
+    (no call). A partially-missing genotype (e.g. ``"0/."``) is treated as a
+    no call, which is the conservative choice for trio analysis. Returns
+    ``None`` for any missing/empty/uncallable genotype, else a list of ints.
+    """
+    if gt is None or gt in (".", ""):
+        return None
+    parts = re.split(r"[/|]", gt)
+    indices = []
+    for p in parts:
+        if p == "." or p == "":
+            return None  # any missing slot -> treat whole GT as a no call
+        try:
+            indices.append(int(p))
+        except ValueError:
+            return None
+    return indices or None
+
+
+def _zygosity_wrt_alt(indices, k: int) -> str:
+    """Zygosity of a sample (parsed GT ``indices``) w.r.t. a specific ALT index ``k``.
+
+    ``k`` is the 1-based index of the ALT allele within the original (possibly
+    multi-allelic) record. This collapses a multi-allelic genotype to the
+    biallelic view of allele ``k``: ``hom_alt`` if every called slot is ``k``,
+    ``het`` if some (but not all) slots are ``k``, ``hom_ref`` if the sample is
+    called but carries no copy of ``k`` (it may carry a *different* ALT, which is
+    still "does not carry ``k``"), and ``no_call`` if the genotype is missing.
+    """
+    if indices is None:
+        return "no_call"
+    copies = sum(1 for i in indices if i == k)
+    if copies == 0:
+        return "hom_ref"
+    if copies == len(indices):
+        return "hom_alt"
+    return "het"
+
+
+def _format_value(fmt_keys, values, key: str) -> Optional[str]:
+    """Pull ``key`` out of a per-sample FORMAT field, or ``None`` if absent/missing."""
+    if key in fmt_keys:
+        idx = fmt_keys.index(key)
+        if idx < len(values):
+            v = values[idx]
+            return None if v in (".", "") else v
+    return None
+
+
+def load_variants_vcf_genotyped(path: str, samples=None) -> pd.DataFrame:
+    """Parse a multi-sample VCF capturing per-sample genotype, zygosity, DP and GQ.
+
+    Unlike :func:`load_variants_vcf` (which discards everything past ALT), this
+    reader keeps the FORMAT/sample columns so trio inheritance can use real
+    genotypes. Multi-allelic ALT is split into one row per concrete allele, and
+    each sample's zygosity is computed *with respect to that specific ALT allele*
+    (see :func:`_zygosity_wrt_alt`). It is the only input shape that supports
+    *true* de-novo calling, because a jointly-genotyped hom-ref parent carries a
+    confident reference call at the child's site even with no ALT record.
+
+    Args:
+        path: Path to a plain or bgzipped multi-sample VCF (with ``#CHROM`` header).
+        samples: Optional list of sample names to keep. ``None`` keeps all. A
+            requested name absent from the header raises ``ValueError``.
+
+    Returns:
+        DataFrame with ``chr, pos, ref, alt, variant_id`` plus, for each kept
+        sample ``s``, the columns ``GT__{s}``, ``ZYG__{s}``, ``DP__{s}``,
+        ``GQ__{s}`` (DP/GQ are nullable ints; missing -> NA).
+    """
+    opener = gzip.open if path.endswith(_GZIP_SUFFIXES) else open
+
+    header_samples = None
+    keep = None  # list of (sample_name, column_index) resolved once from the header
+    rows = []
+    n_sites = 0
+    n_symbolic = 0
+
+    with opener(path, "rt") as fh:
+        for lineno, line in enumerate(fh, start=1):
+            if line.startswith("##"):
+                continue
+            if line.startswith("#CHROM"):
+                header_samples = line.rstrip("\n").split("\t")[9:]
+                wanted = samples if samples is not None else header_samples
+                missing = [s for s in wanted if s not in header_samples]
+                if missing:
+                    raise ValueError(
+                        f"{path}: sample(s) {missing} not found in VCF header "
+                        f"{header_samples}."
+                    )
+                keep = [(s, header_samples.index(s)) for s in wanted]
+                continue
+            if line.startswith("#"):
+                continue
+            line = line.rstrip("\n")
+            if not line:
+                continue
+
+            if keep is None:
+                raise ValueError(
+                    f"{path}:{lineno}: data line before a #CHROM header; "
+                    "a genotyped VCF must declare its sample columns."
+                )
+
+            fields = line.split("\t")
+            if len(fields) < 10:
+                raise ValueError(
+                    f"{path}:{lineno}: expected FORMAT + at least one sample column "
+                    f"(>=10 fields), got {len(fields)}."
+                )
+            chrom, pos, vid, ref, alt = fields[:5]
+            fmt_keys = fields[8].split(":")
+            sample_cols = fields[9:]
+            n_sites += 1
+
+            variant_id = None if vid == "." else vid
+            pos = int(pos)
+
+            # Pre-parse each kept sample's GT indices / DP / GQ once per site.
+            parsed = []
+            for s, col in keep:
+                vals = sample_cols[col].split(":")
+                gt_raw = _format_value(fmt_keys, vals, "GT")
+                dp = _format_value(fmt_keys, vals, "DP")
+                gq = _format_value(fmt_keys, vals, "GQ")
+                parsed.append((
+                    s,
+                    gt_raw,
+                    _parse_gt_indices(gt_raw),
+                    int(dp) if dp is not None and dp.isdigit() else None,
+                    int(gq) if gq is not None and gq.isdigit() else None,
+                ))
+
+            for k, allele in enumerate(alt.split(","), start=1):  # 1-based ALT index
+                if _is_symbolic_alt(allele, ref):
+                    n_symbolic += 1
+                    continue
+                row = {
+                    "chr": chrom,
+                    "pos": pos,
+                    "ref": ref,
+                    "alt": allele,
+                    "variant_id": variant_id,
+                }
+                for s, gt_raw, indices, dp, gq in parsed:
+                    row[f"GT__{s}"] = gt_raw
+                    row[f"ZYG__{s}"] = _zygosity_wrt_alt(indices, k)
+                    row[f"DP__{s}"] = dp
+                    row[f"GQ__{s}"] = gq
+                rows.append(row)
+
+    cols = list(VARIANT_SCHEMA)
+    sample_list = samples if samples is not None else (header_samples or [])
+    for s in sample_list:
+        cols += [f"GT__{s}", f"ZYG__{s}", f"DP__{s}", f"GQ__{s}"]
+
+    logger.info(
+        "Parsed %d VCF sites -> %d concrete variant rows; dropped %d symbolic alleles "
+        "(genotyped, %d samples)",
+        n_sites,
+        len(rows),
+        n_symbolic,
+        len(sample_list),
+    )
+    return pd.DataFrame(rows, columns=cols)
+
+
 def read_variants(path: str, fmt: str = "auto") -> pd.DataFrame:
     """Load variants into the canonical table, dispatching on file format.
 
